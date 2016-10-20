@@ -6,6 +6,12 @@ XIncludeFile "TetrisDebug.pbf"
 
 UseModule TetrisLow
 
+Structure FigureItem
+  Name.s
+  *Figure.FigureFrame
+EndStructure
+
+
 Procedure CountFigureFrames(*Figure.FIGURE)
   Protected Result.a
   Protected *CurrentFrame.FigureFrame = *Figure\DefaultFrame
@@ -87,14 +93,20 @@ Procedure OnTrackbarUpdate()
   RenderFigure()
 EndProcedure
 
+Procedure SetDefaultFrame()
+  *FigureLoaded\Frame = *FigureLoaded\DefaultFrame
+  UpdateCaptions()
+  RenderFigure()
+EndProcedure
+
 Procedure LoadFigure(*Figure.FIGURE)
   Global *FigureLoaded = *Figure
   
-  *FigureLoaded\X = 1
-  *FigureLoaded\Y = 1
+  *FigureLoaded\X = 2
+  *FigureLoaded\Y = 2
   SetGadgetAttribute(TrackBar_0, #PB_TrackBar_Maximum, CountFigureFrames(*Figure)-1)
   SetGadgetState(TrackBar_0, 0)
-  OnTrackbarUpdate()
+  SetDefaultFrame()
 EndProcedure
 
 Procedure OnResetButtonDown()
@@ -111,8 +123,30 @@ Procedure RotateAndRender(RotateLeft.b = #True)
   RenderFigure()
 EndProcedure
 
-Procedure SetDefaultFrame()
-  *FigureLoaded\Frame = *FigureLoaded\DefaultFrame
+Procedure LoadFiguresList(List FiguresList.FigureItem())
+  ClearGadgetItems(ListView_0)
+  ForEach FiguresList()
+    AddGadgetItem(ListView_0, -1, FiguresList()\Name)
+    SetGadgetItemData(ListView_0, CountGadgetItems(ListView_0)-1, FiguresList()\Figure)
+  Next
+EndProcedure
+
+Procedure LoadRandomFigure()
+  Protected *RandomFigure.FIGURE
+  Protected RandomWidth.a, RandomHeight.a
+  Protected RandomByte.a, i.i
+  
+  RandomWidth = Random(4, 1)
+  RandomHeight = Random(4, 1)
+  RandomByte = Random($FF, $10)
+  Dim RandomDataArr.a(RandomWidth * RandomHeight - 1)
+  
+  For i = 0 To ArraySize(RandomDataArr())
+    If Random(1) : RandomDataArr(i) = RandomByte : EndIf
+  Next
+  *RandomFigure = CreateFigureAuto(CreateFrameFromA(RandomWidth, RandomHeight, RandomDataArr()))
+  
+  LoadFigure(*RandomFigure)
   UpdateCaptions()
   RenderFigure()
 EndProcedure
@@ -120,11 +154,38 @@ EndProcedure
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Global *FigureLoaded
 Global *Stack.STACK = CreateStack(10, 20)
+NewList AllFiguresList.FigureItem()
+
 Define Event.i
 Define LastTrackBarPos.i = -1
+Define LastListItem.i = -1
+Define SelectedItem.i
+
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "T"
+AllFiguresList()\Figure = *TFigureA
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "L"
+AllFiguresList()\Figure = *LFigureA
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "F"
+AllFiguresList()\Figure = *FFigureA
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "Z"
+AllFiguresList()\Figure = *ZFigureA
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "S"
+AllFiguresList()\Figure = *SFigureA
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "I"
+AllFiguresList()\Figure = *IFigureA
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "O"
+AllFiguresList()\Figure = *OFigureA
 
 OpenWindow_0()
-LoadFigure(*IFigureA)
+LoadFigure(*TFigureA)
+LoadFiguresList(AllFiguresList())
 
 Repeat
   Event = WaitWindowEvent()
@@ -155,6 +216,17 @@ Repeat
       If EventType() = #PB_EventType_LeftClick
         SetDefaultFrame()
       EndIf
+      
+    Case Button_8
+      LoadRandomFigure()
+      
+    Case ListView_0
+      If EventType() = #PB_EventType_LeftClick
+        SelectedItem = GetGadgetState(ListView_0)
+        If SelectedItem <> -1 And SelectedItem <> LastListItem
+          LoadFigure(GetGadgetItemData(ListView_0, SelectedItem))
+        EndIf
+      EndIf
   EndSelect
   
   If Not Window_0_Events(Event)
@@ -162,8 +234,8 @@ Repeat
   EndIf 
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 158
-; FirstLine = 122
+; CursorPosition = 148
+; FirstLine = 130
 ; Folding = --
 ; EnableUnicode
 ; EnableXP

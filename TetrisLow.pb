@@ -314,8 +314,8 @@ Module TetrisLow
     RotateLow(*Figure, RotateLeft)
     *Current = *Figure\Frame
     
-    ; ЕСЛИ КАДРЫ РАЗНЫХ РАЗМЕРОВ - СЧИТАЕМ ЦЕНТРЫ И ОБНОВЛЯЕМ КООРДИНАТУ
-    If (*Current\Width <> *Last\Width) Or (*Current\Height <> *Last\Height)
+    ; ЕСЛИ КАДРЫ РАЗНЫЕ - СЧИТАЕМ ЦЕНТРЫ И ОБНОВЛЯЕМ КООРДИНАТУ
+    If *Current <> *Last
       ; ЕСЛИ РАНЬШЕ НЕ ДЕЛАЛИ, РАСЧИТЫВАЕМ ГДЕ БУДЕТ ЦЕНТРАЛЬНАЯ ТОЧКА ПОСЛЕ ПОВОРОТА
       If (*Current\XCenter = 0) Or (*Current\YCenter = 0)
         If RotateLeft = 0
@@ -375,8 +375,8 @@ Module TetrisLow
   
 EndModule
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 172
-; FirstLine = 145
+; CursorPosition = 317
+; FirstLine = 304
 ; Folding = ----
 ; EnableUnicode
 ; EnableXP
