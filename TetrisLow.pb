@@ -83,6 +83,7 @@ DeclareModule TetrisLow
   Declare RotateLow(*Figure.FIGURE, RotateLeft.b = #True)
   
   ; ПРОВЕРЯЕТ НЕ НАЛОЖИЛАСЬ ЛИ ФИГУРА НА КАКОЙ-ЛИБО БЛОК В СТАКАНЕ
+  ; НАЛОЖЕНИЕМ ТАКЖЕ СЧИТАЕТСЯ ВЫХОД ЗА ГРАНИЦЫ СТАКАНА
   ; @Returns: 0 ЕСЛИ НЕ НАЛОЖИЛАСЬ, ЛЮБОЕ ДРУГОЕ ЗНАЧЕНИЕ ЕСЛИ НАЛОЖИЛАСЬ
   Declare CheckCollision(*Figure.FIGURE, *Stack.STACK)
   
@@ -351,20 +352,30 @@ Module TetrisLow
   
   
   Procedure CheckCollision(*Figure.FIGURE, *Stack.STACK)
-    Protected.a Result, x, y
-    Protected.i FramePos, StackPos
+    Protected.a x, y
+    ; ВАЖНО, ЧТОБЫ Result БЫЛ НЕ МЕНЬШЕ int, ИНАЧЕ БИТЫ МОГУТ В НЕГО НЕ ПОПАСТЬ
+    Protected.i Result, FramePos, StackPos
     Protected *F.FigureFrame = *Figure\Frame
+    
+    ; НУЖНО ПРОВЕРИТЬ НЕ ВЫХОДИТ ЛИ ФИГУРА ЗА РАМКИ СТАКАНА
+    ; ИНАЧЕ МОЖЕМ ОБРАТИТЬСЯ К ПАМЯТИ ЗА ПРЕДЕЛАМИ СТАКАНА
+    If ((*Figure\Y + *F\Height) > *Stack\Height+1) Or (*Figure\Y < 0) Or
+       ((*Figure\X + *F\Width) > *Stack\Width+1) Or (*Figure\X < 0)
+      ProcedureReturn 1
+    EndIf
     
     Repeat
       For x = 0 To *F\Width-1
         FramePos = *F\Width * y + x
         StackPos = (*Figure\Y + y) * *Stack\Width + *Figure\X + x
         Result | (PeekA(*F\Data + FramePos) & PeekA(*Stack\Matrix + StackPos))
-        Debug Str(FramePos) + "F is " + Str(StackPos) + "S.  Result: " + Str(Result)
-        Debug "=========================="
+        Debug Str(FramePos) + "F is " + Str(StackPos) + "S.  Result: " + 
+              Str(Result) + " (F: " + Hex(PeekA(*F\Data + FramePos)) + 
+              ", S: " + Hex(PeekA(*Stack\Matrix + StackPos)) + ")"
       Next
       y + 1
     Until y = *F\Height
+    Debug "=========================="
     ProcedureReturn Result
   EndProcedure
   
@@ -382,7 +393,36 @@ Module TetrisLow
   
   
   Procedure IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b)
+    Protected Result.b
     
+    *Figure\X + DeltaX
+    *Figure\Y + DeltaY
+    
+    If CheckCollision(*Figure, *Stack)
+      Result = #False
+      Debug "Can't move because collision"
+    ElseIf ((*Figure\Y + *Figure\Frame\Height) < *Stack\Height+1) And (*Figure\Y >= 0) And
+           ((*Figure\X + *Figure\Frame\Width) < *Stack\Width+1) And (*Figure\X >= 0)
+      Result = #True
+    Else
+      Result = #False
+      Debug "Can't move because out of bounds"
+      If (*Figure\Y + *Figure\Frame\Height) < *Stack\Height-1
+        Debug "(*Figure\Y + *Figure\Frame\Height) < *Stack\Height-1   True"
+      EndIf
+      If (*Figure\Y >= 0)
+        Debug "(*Figure\Y >= 0) True"
+      EndIf
+      If ((*Figure\X + *Figure\Frame\Width) < *Stack\Width-1)
+        Debug "((*Figure\X + *Figure\Frame\Width) < *Stack\Width-1) True"
+      EndIf
+      If (*Figure\X >= 0)
+        Debug "(*Figure\X >= 0) True"
+      EndIf
+    EndIf
+    *Figure\X - DeltaX
+    *Figure\Y - DeltaY
+    ProcedureReturn Result
   EndProcedure
   
 EndModule
@@ -399,8 +439,8 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 384
-; FirstLine = 359
+; CursorPosition = 85
+; FirstLine = 80
 ; Folding = ----
 ; EnableUnicode
 ; EnableXP

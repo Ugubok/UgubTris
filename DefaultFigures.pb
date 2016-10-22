@@ -9,6 +9,7 @@ DefaultFigureBytes("o") = $CC
 DefaultFigureBytes(" ") = 0
 
 Define.FIGURE *TFigureA, *IFigureA, *LFigureA, *FFigureA, *ZFigureA, *SFigureA, *OFigureA
+Define.FIGURE *BUGFigureA
 Define *ZFigureM.FIGURE
 Define *ZFigureFrame.FigureFrame
 
@@ -19,6 +20,7 @@ Define *ZFigureFrame.FigureFrame
 *ZFigureA = CreateFigureAuto(CreateFrameFromS(3, 2, DefaultFigureBytes(), "**  **"))
 *SFigureA = CreateFigureAuto(CreateFrameFromS(3, 2, DefaultFigureBytes(), " **** "))
 *OFigureA = CreateFigureAuto(CreateFrameFromS(2, 2, DefaultFigureBytes(), "****"))
+*BUGFigureA = CreateFigureAuto(CreateFrameFromS(4, 2, DefaultFigureBytes(), " * *  * "))
 
 *ZFigureFrame = CreateFrameFromS(3, 2, DefaultFigureBytes(), "++  ++")
 *ZFigureFrame\NextFrame = CreateFrameFromS(2, 3, DefaultFigureBytes(), " ++++ ")
@@ -26,6 +28,6 @@ LinkFrames(*ZFigureFrame, *ZFigureFrame\NextFrame)
 *ZFigureM = CreateFigure(*ZFigureFrame)
 
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 10
+; CursorPosition = 11
 ; EnableUnicode
 ; EnableXP

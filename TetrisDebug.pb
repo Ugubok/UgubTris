@@ -57,7 +57,7 @@ Procedure DrawGrid()
   For y = 0 To 19
     Box(0, (#SQARE_SIZE+#PADDING)*y - #PADDING + #MARGIN, 300, #PADDING, #GRID_COLOR)
   Next
-  For x = 0 To 10
+  For x = 0 To 19
     Box((#SQARE_SIZE+#PADDING)*x - #PADDING + #MARGIN, 0, #PADDING, 300, #GRID_COLOR)
   Next
   StopDrawing()
@@ -195,7 +195,7 @@ Procedure LoadRandomFigure()
 EndProcedure
 
 Procedure MoveFigure(DeltaX.i, DeltaY.i)
-  If *FigureLoaded
+  If *FigureLoaded And IsMovePossible(*FigureLoaded, *Stack, DeltaX, DeltaY)
     *FigureLoaded\X + DeltaX
     *FigureLoaded\Y + DeltaY
     UpdateCaptions()
@@ -243,6 +243,9 @@ AllFiguresList()\Figure = *IFigureA
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "O"
 AllFiguresList()\Figure = *OFigureA
+AddElement(AllFiguresList())
+AllFiguresList()\Name = "BUG"
+AllFiguresList()\Figure = *BUGFigureA
 
 OpenWindow_0()
 FillStackWithShit(*Stack)
@@ -311,13 +314,36 @@ Repeat
       EndIf
   EndSelect
   
+  ;{ CONTROL FROM KEYBOARD
+  If GetKeyState_(#VK_LEFT) < 0
+    MoveFigure(-1, 0)
+  EndIf
+  If GetKeyState_(#VK_RIGHT) < 0
+    MoveFigure(1, 0)
+  EndIf
+  If GetKeyState_(#VK_UP) < 0
+    MoveFigure(0, -1)
+  EndIf
+  If GetKeyState_(#VK_DOWN) < 0
+    MoveFigure(0, 1)
+  EndIf
+  If GetKeyState_(#VK_Q) < 0
+    RotateAndRender(#False)
+  ElseIf GetKeyState_(#VK_E) < 0
+    RotateAndRender(#True)
+  EndIf
+  If GetKeyState_(#VK_R)
+    LoadRandomFigure()
+  EndIf
+  ;}
+  
   If Not Window_0_Events(Event)
     Break
   EndIf 
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 207
-; FirstLine = 181
-; Folding = ---
+; CursorPosition = 59
+; FirstLine = 53
+; Folding = ----
 ; EnableUnicode
 ; EnableXP
