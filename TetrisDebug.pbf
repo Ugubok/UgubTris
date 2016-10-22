@@ -9,23 +9,47 @@
 
 Global Window_0
 
-Global Canvas_0, Text_0, Text_1, TrackBar_0, Text_2, Text_3, Button_0, Button_2, Button_3, Button_4, ListView_0, Button_8
+Global Canvas_0, Text_0, Text_1, TrackBar_0, Text_2, Text_3, Button_0, Button_2, Button_3, Button_4, ListView_0, Button_8, Button_mvLeft, Button_mvRight, Button_mvDown, Button_mvUp, Text_CollisionSign
+
+Enumeration FormFont
+  #Font_Window_0_0
+  #Font_Window_0_1
+  #Font_Window_0_2
+  #Font_Window_0_3
+EndEnumeration
+
+LoadFont(#Font_Window_0_0,"Arial", 10)
+LoadFont(#Font_Window_0_1,"Arial Narrow", 10)
+LoadFont(#Font_Window_0_2,"Arial Narrow", 12)
+LoadFont(#Font_Window_0_3,"Fixedsys", 10, #PB_Font_Bold)
 
 
-Procedure OpenWindow_0(x = 0, y = 0, width = 290, height = 290)
+Procedure OpenWindow_0(x = 0, y = 0, width = 290, height = 310)
   Window_0 = OpenWindow(#PB_Any, x, y, width, height, "TetrisGubok Debug", #PB_Window_SystemMenu)
-  Canvas_0 = CanvasGadget(#PB_Any, 10, 10, 170, 180)
+  Canvas_0 = CanvasGadget(#PB_Any, 10, 10, 175, 180)
   Text_0 = TextGadget(#PB_Any, 190, 50, 100, 20, "")
   Text_1 = TextGadget(#PB_Any, 190, 10, 100, 20, "")
   TrackBar_0 = TrackBarGadget(#PB_Any, 190, 90, 90, 20, 0, 0)
   Text_2 = TextGadget(#PB_Any, 190, 70, 100, 20, "")
   Text_3 = TextGadget(#PB_Any, 190, 30, 100, 20, "")
-  Button_0 = ButtonGadget(#PB_Any, 190, 140, 90, 25, "ResetCoord")
-  Button_2 = ButtonGadget(#PB_Any, 190, 110, 40, 25, "<")
-  Button_3 = ButtonGadget(#PB_Any, 240, 110, 40, 25, ">")
-  Button_4 = ButtonGadget(#PB_Any, 190, 170, 90, 25, "Default frame")
-  ListView_0 = ListViewGadget(#PB_Any, 10, 200, 130, 80)
-  Button_8 = ButtonGadget(#PB_Any, 190, 200, 90, 25, "RandomFigure")
+  Button_0 = ButtonGadget(#PB_Any, 190, 110, 90, 25, "ResetCoord")
+  Button_2 = ButtonGadget(#PB_Any, 250, 248, 25, 25, "R")
+  Button_3 = ButtonGadget(#PB_Any, 196, 248, 25, 25, "L")
+  Button_4 = ButtonGadget(#PB_Any, 190, 140, 90, 25, "Default frame")
+  ListView_0 = ListViewGadget(#PB_Any, 10, 200, 130, 100)
+  Button_8 = ButtonGadget(#PB_Any, 190, 170, 90, 25, "RandomFigure")
+  Button_mvLeft = ButtonGadget(#PB_Any, 196, 275, 25, 25, "<")
+  SetGadgetFont(Button_mvLeft, FontID(#Font_Window_0_0))
+  Button_mvRight = ButtonGadget(#PB_Any, 250, 275, 25, 25, ">")
+  SetGadgetFont(Button_mvRight, FontID(#Font_Window_0_1))
+  Button_mvDown = ButtonGadget(#PB_Any, 223, 275, 25, 25, "v")
+  SetGadgetFont(Button_mvDown, FontID(#Font_Window_0_1))
+  Button_mvUp = ButtonGadget(#PB_Any, 223, 248, 25, 25, "^")
+  SetGadgetFont(Button_mvUp, FontID(#Font_Window_0_2))
+  Text_CollisionSign = TextGadget(#PB_Any, 190, 200, 90, 20, "COLLISION", #PB_Text_Center)
+  HideGadget(Text_CollisionSign, 1)
+  SetGadgetColor(Text_CollisionSign, #PB_Gadget_FrontColor,RGB(255,0,0))
+  SetGadgetFont(Text_CollisionSign, FontID(#Font_Window_0_3))
 EndProcedure
 
 Procedure Window_0_Events(event)

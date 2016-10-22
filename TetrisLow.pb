@@ -72,19 +72,6 @@ DeclareModule TetrisLow
   ; @Returns: *FIGURE
   Declare CreateFigure(*DefaultFrame.FigureFrame, SetCenterAuto.b = #True)
   
-  ; ДОБАВЛЯЕТ ФИГУРУ В СПИСОК ДОСТУПНЫХ ДЛЯ ВЫБОРА ПРОЦЕДУРОЙ GetRandomFigure()
-  Declare PutToBag(*Figure.FIGURE)
-  
-  ; УБИРАЕТ ФИГУРУ ИЗ СПИСКА ДОСТУПНЫХ 
-  Declare PutFromBag(*Figure.FIGURE)
-  
-  ; ОЧИЩАЕТ СПИСОК ДОСТУПНЫХ ФИГУР
-  Declare ClearBag()
-  
-  ; ВОЗВРАЩАЕТ СЛУЧАЙНУЮ ФИГУРУ ИЗ СПИСКА ДОСТУПНЫХ ФИГУР (FiguresBag)
-  ; @Returns: *FIGURE
-  Declare GetRandomFigure()
-  
   ; ПОВАРАЧИВАЕТ ФИГУРУ ВЛЕВО/ВПРАВО (ТЕХНИЧЕСКИ, ПРОСТО МЕНЯЕТ ТЕКУЩИЙ КАДР)
   ; ЗАТЕМ ОБНОВЛЯЕТ КООРДИНАТУ ФИГУРЫ ТАК, ЧТОБЫ ЦЕНТРЫ КАДРОВ СОШЛИСЬ В ОДНОЙ ТОЧКЕ
   ; ДЛЯ ПРОВЕРКИ ВЫХОДА ЗА ГРАНИЦЫ ПРИШЛОСЬ ДОБАВИТЬ АРГУМЕНТ *Stack
@@ -95,12 +82,20 @@ DeclareModule TetrisLow
   ; ПОВОРАЧИВАЕТ ФИГУРУ ВЛЕВО/ВПРАВО, НЕ МЕНЯЯ КООРДИНАТ
   Declare RotateLow(*Figure.FIGURE, RotateLeft.b = #True)
   
-  ; TODO: ПРОЦЕДУРЫ ПРОВЕРКИ КОЛЛИЗИИ И ЕЩО НЕКОТОРЫЕ ШТУКИ
+  ; ПРОВЕРЯЕТ НЕ НАЛОЖИЛАСЬ ЛИ ФИГУРА НА КАКОЙ-ЛИБО БЛОК В СТАКАНЕ
+  ; @Returns: 0 ЕСЛИ НЕ НАЛОЖИЛАСЬ, ЛЮБОЕ ДРУГОЕ ЗНАЧЕНИЕ ЕСЛИ НАЛОЖИЛАСЬ
+  Declare CheckCollision(*Figure.FIGURE, *Stack.STACK)
+  
+  ; ПРОВЕРКА ВОЗМОЖНОСТИ ПОВОРОТА ФИГУРЫ
+  ; @Returns: 1 ЕСЛИ ВОЗМОЖНО, 0 ЕСЛИ НЕВОЗМОЖНО ПО ПРИЧИНЕ КОЛЛИЗИИ С БЛОКОМ
+  ;           -1 ЕСЛИ НЕВОЗМОЖНО ПО ПРИЧИНЕ ВЫХОДА ЗА ГРАНИЦЫ СТАКАНА
+  Declare IsRotationPossible(*Figure.FIGURE, *Stack.STACK, RotateLeft.b = #True)
+  
+  ; ПРОВЕРЯЕТ ВОЗМОЖНОСТЬ СДВИГА ФИГУРЫ НА УКАЗАННОЕ РАССТОЯНИЕ
+  ; УЧИТЫВАЕТ СТОЛКНОВЕНИЯ С БЛОКАМИ И ВЫХОД ЗА ГРАНИЦЫ СТАКАНА
+  Declare IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b)
   
   ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  
-  ; ЗДЕСЬ БУДУТ ХРАНИТЬСЯ УКАЗАТЕЛИ НА ДОСТУПНЫЕ В ИГРЕ ФИГУРЫ
-  Global NewList FiguresBag()
 EndDeclareModule
 
 
@@ -158,6 +153,7 @@ Module TetrisLow
     Else
       *Frame\YCenter = *Frame\Height / 2 + 1
     EndIf
+    
     
     ;While *Frame\NextFrame <> *Figure\DefaultFrame
     ;  *Frame = *Frame\NextFrame
@@ -354,29 +350,57 @@ Module TetrisLow
   EndProcedure
   
   
-  Procedure PutToBag(*Figure.FIGURE)
-    ; TODO THIS
+  Procedure CheckCollision(*Figure.FIGURE, *Stack.STACK)
+    Protected.a Result, x, y
+    Protected.i FramePos, StackPos
+    Protected *F.FigureFrame = *Figure\Frame
+    
+    Repeat
+      For x = 0 To *F\Width-1
+        FramePos = *F\Width * y + x
+        StackPos = (*Figure\Y + y) * *Stack\Width + *Figure\X + x
+        Result | (PeekA(*F\Data + FramePos) & PeekA(*Stack\Matrix + StackPos))
+        Debug Str(FramePos) + "F is " + Str(StackPos) + "S.  Result: " + Str(Result)
+        Debug "=========================="
+      Next
+      y + 1
+    Until y = *F\Height
+    ProcedureReturn Result
   EndProcedure
   
   
-  Procedure PutFromBag(*Figure.FIGURE)  
-    ; TODO THIS
+  Procedure IsRotationPossible(*Figure.FIGURE, *Stack.STACK, RotateLeft.b = #True)
+    Protected Result.b
+    ; ЕСЛИ ПОВЕРНУЛАСЬ - ПРОВЕРЯЕМ НА КОЛЛИЗИЮ; ЕСЛИ НЕТ - ЗНАЧИТ ВЫШЛА ЗА ГРАНИЦЫ
+    If RotateWithCentering(*Figure, *Stack, RotateLeft)
+      
+      RotateWithCentering(*Figure, *Stack, #True ! RotateLeft)
+    Else
+      ProcedureReturn -1
+    EndIf
   EndProcedure
   
   
-  Procedure ClearBag()
-    ; TODO THIS
-  EndProcedure
-  
-  
-  Procedure GetRandomFigure()
-    ; TODO THIS
+  Procedure IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b)
+    
   EndProcedure
   
 EndModule
+
+
+
+
+
+
+
+
+
+
+
+
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 317
-; FirstLine = 304
+; CursorPosition = 384
+; FirstLine = 359
 ; Folding = ----
 ; EnableUnicode
 ; EnableXP

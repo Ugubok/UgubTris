@@ -1,5 +1,6 @@
 ﻿EnableExplicit
 
+PurifierGranularity(1, 1, 1, 1)
 XIncludeFile "TetrisLow.pb"
 XIncludeFile "DefaultFigures.pb"
 XIncludeFile "TetrisDebug.pbf"
@@ -10,6 +11,12 @@ Structure FigureItem
   Name.s
   *Figure.FigureFrame
 EndStructure
+
+;- RENDER CONSTANTS
+#SQARE_SIZE = 10
+#PADDING = 1
+#MARGIN = 0
+#GRID_COLOR = $DDDDDD
 
 
 Procedure CountFigureFrames(*Figure.FIGURE)
@@ -32,49 +39,85 @@ EndProcedure
 
 Procedure UpdateCaptions()
   Global *FigureLoaded.FIGURE
+  Global *Stack.STACK
   SetGadgetText(Text_0, "Frame #" + Str(GetGadgetState(TrackBar_0)) + "/" + Str(CountFigureFrames(*FigureLoaded)-1))
   SetGadgetText(Text_1, "Frame Size " + Str(*FigureLoaded\Frame\Width) + "x" + Str(*FigureLoaded\Frame\Height))
   SetGadgetText(Text_2, "X: " + Str(*FigureLoaded\X) + "; Y: " + Str(*FigureLoaded\Y))
   SetGadgetText(Text_3, "CenterPoint: " + Str(*FigureLoaded\Frame\XCenter) + "," + Str(*FigureLoaded\Frame\YCenter))
+  HideGadget(Text_CollisionSign, #True ! Bool(CheckCollision(*FigureLoaded, *Stack)))
+EndProcedure
+
+Procedure.i TrueColor8bit(Color.a)
+  ProcedureReturn (Color>>5 << 21) | ((Color>>2 & %000111) << 13) | ((Color&3) << 6)
+EndProcedure
+
+Procedure DrawGrid()
+  Protected x.a, y.a
+  StartDrawing(CanvasOutput(Canvas_0))
+  For y = 0 To 19
+    Box(0, (#SQARE_SIZE+#PADDING)*y - #PADDING + #MARGIN, 300, #PADDING, #GRID_COLOR)
+  Next
+  For x = 0 To 10
+    Box((#SQARE_SIZE+#PADDING)*x - #PADDING + #MARGIN, 0, #PADDING, 300, #GRID_COLOR)
+  Next
+  StopDrawing()
+EndProcedure
+
+Procedure RenderStack()
+  Global *Stack.STACK
+  Protected x.i, y.i, color.i, RenderX.i, RenderY.i
+  
+  StartDrawing(CanvasOutput(Canvas_0))  
+  For y = 0 To *Stack\Height-1
+    For x = 0 To *Stack\Width-1
+      color = TrueColor8bit(PeekA(*Stack\Matrix + *Stack\Width * y + x))
+      RenderX = #MARGIN + #PADDING*x + #SQARE_SIZE*x
+      RenderY = #MARGIN + #PADDING*y + #SQARE_SIZE*y
+      If color
+        Box(RenderX, RenderY, #SQARE_SIZE, #SQARE_SIZE, color)
+      ;Else
+      ;  Box(RenderX, RenderY, #SQARE_SIZE, #SQARE_SIZE, $DDDDDD)
+      EndIf
+    Next
+  Next
+  StopDrawing()
 EndProcedure
 
 Procedure RenderFigure()
   Global *FigureLoaded.FIGURE
-  Protected x.a, y.a, tx.i, ty.i, i.a, color.a, RenderX.i, RenderY.i
-  #SQARE_SIZE = 20
-  #PADDING = 4
-  #MARGIN = 4
+  Protected x.a, y.a, tx.i, ty.i, i.a, color.i, RenderX.i, RenderY.i
   
   If *FigureLoaded
-    ClearCanvas()
     StartDrawing(CanvasOutput(Canvas_0))
-    For y = 0 To 10
-      Box(0, (#SQARE_SIZE+#PADDING)*y - #PADDING + #MARGIN, 300, #PADDING, $DDDDDD)
-    Next
-    For x = 0 To 10
-      Box((#SQARE_SIZE+#PADDING)*x - #PADDING + #MARGIN, 0, #PADDING, 300, $DDDDDD)
-    Next
+    
     For y = 0 To *FigureLoaded\Frame\Height - 1
       For x = 0 To *FigureLoaded\Frame\Width - 1
-        color = PeekA(*FigureLoaded\Frame\Data + i)
+        color = TrueColor8bit(PeekA(*FigureLoaded\Frame\Data + i))
         tx = x + *FigureLoaded\X
         ty = y + *FigureLoaded\Y
         RenderX = #MARGIN + #PADDING*tx + #SQARE_SIZE*tx
         RenderY = #MARGIN + #PADDING*ty + #SQARE_SIZE*ty
         If color
-          Box(RenderX, RenderY, #SQARE_SIZE, #SQARE_SIZE, color << 2)
-        Else
-          Box(RenderX, RenderY, #SQARE_SIZE, #SQARE_SIZE, $DDDDDD)
+          Box(RenderX, RenderY, #SQARE_SIZE, #SQARE_SIZE, color)
+        ;Else
+        ;  Box(RenderX, RenderY, #SQARE_SIZE, #SQARE_SIZE, $DDDDDD)
         EndIf
         
         If (x = *FigureLoaded\Frame\XCenter-1) And (y = *FigureLoaded\Frame\YCenter-1)
-          Circle(RenderX + #SQARE_SIZE/2, RenderY + #SQARE_SIZE/2, 5, $800080)
+          Circle(RenderX + #SQARE_SIZE/2, RenderY + #SQARE_SIZE/2, #SQARE_SIZE/4, $800080)
         EndIf
         i + 1
       Next
     Next
     StopDrawing()
   EndIf
+EndProcedure
+
+Procedure RenderAll()
+  ClearCanvas()
+  DrawGrid()
+  RenderStack()
+  RenderFigure()
 EndProcedure
 
 Procedure OnTrackbarUpdate()
@@ -90,13 +133,13 @@ Procedure OnTrackbarUpdate()
   Next
   
   UpdateCaptions()
-  RenderFigure()
+  RenderAll()
 EndProcedure
 
 Procedure SetDefaultFrame()
   *FigureLoaded\Frame = *FigureLoaded\DefaultFrame
   UpdateCaptions()
-  RenderFigure()
+  RenderAll()
 EndProcedure
 
 Procedure LoadFigure(*Figure.FIGURE)
@@ -120,7 +163,7 @@ EndProcedure
 Procedure RotateAndRender(RotateLeft.b = #True)
   RotateWithCentering(*FigureLoaded, *Stack, RotateLeft)
   UpdateCaptions()
-  RenderFigure()
+  RenderAll()
 EndProcedure
 
 Procedure LoadFiguresList(List FiguresList.FigureItem())
@@ -148,12 +191,30 @@ Procedure LoadRandomFigure()
   
   LoadFigure(*RandomFigure)
   UpdateCaptions()
-  RenderFigure()
+  RenderAll()
+EndProcedure
+
+Procedure MoveFigure(DeltaX.i, DeltaY.i)
+  If *FigureLoaded
+    *FigureLoaded\X + DeltaX
+    *FigureLoaded\Y + DeltaY
+    UpdateCaptions()
+    RenderAll()
+  EndIf
+EndProcedure
+
+Procedure FillStackWithShit(*Stack.STACK)
+  Protected i.i
+  For i = 0 To *Stack\Width * *Stack\Height - 1
+    If Random(4) = 3
+      PokeA(*Stack\Matrix + i, 100)
+    EndIf
+  Next
 EndProcedure
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Global *FigureLoaded
-Global *Stack.STACK = CreateStack(10, 20)
+Global *Stack.STACK = CreateStack(16, 16)
 NewList AllFiguresList.FigureItem()
 
 Define Event.i
@@ -184,6 +245,7 @@ AllFiguresList()\Name = "O"
 AllFiguresList()\Figure = *OFigureA
 
 OpenWindow_0()
+FillStackWithShit(*Stack)
 LoadFigure(*TFigureA)
 LoadFiguresList(AllFiguresList())
 
@@ -220,6 +282,26 @@ Repeat
     Case Button_8
       LoadRandomFigure()
       
+    Case Button_mvUp
+      If EventType() = #PB_EventType_LeftClick
+        MoveFigure(0, -1)
+      EndIf
+      
+    Case Button_mvDown
+      If EventType() = #PB_EventType_LeftClick
+        MoveFigure(0, 1)
+      EndIf
+      
+    Case Button_mvLeft
+      If EventType() = #PB_EventType_LeftClick
+        MoveFigure(-1, 0)
+      EndIf
+      
+    Case Button_mvRight
+      If EventType() = #PB_EventType_LeftClick
+        MoveFigure(1, 0)
+      EndIf
+      
     Case ListView_0
       If EventType() = #PB_EventType_LeftClick
         SelectedItem = GetGadgetState(ListView_0)
@@ -234,8 +316,8 @@ Repeat
   EndIf 
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 148
-; FirstLine = 130
-; Folding = --
+; CursorPosition = 207
+; FirstLine = 181
+; Folding = ---
 ; EnableUnicode
 ; EnableXP

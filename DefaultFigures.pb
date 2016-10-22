@@ -4,7 +4,7 @@ UseModule TetrisLow
 
 NewMap DefaultFigureBytes.a()
 DefaultFigureBytes("+") = $A0
-DefaultFigureBytes("*") = $FF
+DefaultFigureBytes("*") = $07
 DefaultFigureBytes("o") = $CC
 DefaultFigureBytes(" ") = 0
 
@@ -26,6 +26,6 @@ LinkFrames(*ZFigureFrame, *ZFigureFrame\NextFrame)
 *ZFigureM = CreateFigure(*ZFigureFrame)
 
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 16
+; CursorPosition = 10
 ; EnableUnicode
 ; EnableXP
