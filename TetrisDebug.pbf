@@ -25,7 +25,7 @@ LoadFont(#Font_Window_0_3,"Fixedsys", 10, #PB_Font_Bold)
 
 
 Procedure OpenWindow_0(x = 0, y = 0, width = 290, height = 310)
-  Window_0 = OpenWindow(#PB_Any, x, y, width, height, "TetrisGubok Debug", #PB_Window_SystemMenu)
+  Window_0 = OpenWindow(#PB_Any, x, y, width, height, "TetrisGubok Debug", #PB_Window_SystemMenu | #PB_Window_ScreenCentered)
   Canvas_0 = CanvasGadget(#PB_Any, 10, 10, 175, 180)
   Text_0 = TextGadget(#PB_Any, 190, 50, 100, 20, "")
   Text_1 = TextGadget(#PB_Any, 190, 10, 100, 20, "")

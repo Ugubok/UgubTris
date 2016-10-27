@@ -1,8 +1,23 @@
 ﻿EnableExplicit
 
-PurifierGranularity(1, 1, 1, 1)
-XIncludeFile "TetrisLow.pb"
-XIncludeFile "DefaultFigures.pb"
+PurifierGranularity(1, 1, 1, 1) 
+
+Procedure ErrorHandler()
+	Protected DieMsg$ = GetFilePart(ErrorFile()) + " [" + ErrorLine() + "]" + #CRLF$ + 
+				UCase(ErrorMessage()) + " [ 0x" + RSet(Hex(ErrorTargetAddress()), SizeOf(INTEGER) * 2, "0") + " ]" + #CRLF$ +
+					RSet("", 64, " ")
+	
+	CompilerIf #PB_Compiler_OS = #PB_OS_Windows 
+		MessageBox_(0, DieMsg$, "FATAL ERROR", #MB_ICONSTOP | #MB_OK)
+	CompilerElse
+		MessageRequester("FATAL ERROR", DieMsg$)
+	CompilerEndIf
+EndProcedure
+OnErrorCall(@ErrorHandler())
+
+
+XIncludeFile "TetrisMid.pb"
+IncludeFile "DefaultFigures.pb"
 XIncludeFile "TetrisDebug.pbf"
 
 UseModule TetrisLow
@@ -65,12 +80,12 @@ EndProcedure
 
 Procedure RenderStack()
   Global *Stack.STACK
-  Protected x.i, y.i, color.i, RenderX.i, RenderY.i
+  Protected.i x, y, color, RenderX, RenderY
   
   StartDrawing(CanvasOutput(Canvas_0))  
   For y = 0 To *Stack\Height-1
     For x = 0 To *Stack\Width-1
-      color = TrueColor8bit(PeekA(*Stack\Matrix + *Stack\Width * y + x))
+      color = TrueColor8bit(ReadStackXY(*Stack, x, y))
       RenderX = #MARGIN + #PADDING*x + #SQARE_SIZE*x
       RenderY = #MARGIN + #PADDING*y + #SQARE_SIZE*y
       If color
@@ -85,14 +100,33 @@ EndProcedure
 
 Procedure RenderFigure()
   Global *FigureLoaded.FIGURE
-  Protected x.a, y.a, tx.i, ty.i, i.a, color.i, RenderX.i, RenderY.i
+  Global *Stack.STACK
+  Protected.i x, y, tx, ty, i, color, RenderX, RenderY
   
   If *FigureLoaded
     StartDrawing(CanvasOutput(Canvas_0))
     
+    ; FIRST OF ALL, RENDER FIGURE SHADOW
+    CalcShadowCoord(*FigureLoaded, *Stack)
+    For y = *FigureLoaded\ShadowY To *FigureLoaded\ShadowY + *FigureLoaded\Frame\Height - 1
+      For x = 0 To *FigureLoaded\Frame\Width - 1
+        color = TrueColor8bit(PeekBLOCK(*FigureLoaded\Frame\Data + i * SizeOf(BLOCK)))
+        tx = x + *FigureLoaded\X
+        ty = y
+        RenderX = #MARGIN + #PADDING*tx + #SQARE_SIZE*tx
+        RenderY = #MARGIN + #PADDING*ty + #SQARE_SIZE*ty
+        If color
+          Box(RenderX, RenderY, #SQARE_SIZE, #SQARE_SIZE, $C8D530)
+          Box(RenderX+1, RenderY+1, #SQARE_SIZE-2, #SQARE_SIZE-2)
+        EndIf
+        i + 1
+      Next
+    Next 
+    i = 0
+    ; THEN RENDER FIGURE
     For y = 0 To *FigureLoaded\Frame\Height - 1
       For x = 0 To *FigureLoaded\Frame\Width - 1
-        color = TrueColor8bit(PeekA(*FigureLoaded\Frame\Data + i))
+        color = PeekBLOCK(*FigureLoaded\Frame\Data + i * SizeOf(BLOCK))
         tx = x + *FigureLoaded\X
         ty = y + *FigureLoaded\Y
         RenderX = #MARGIN + #PADDING*tx + #SQARE_SIZE*tx
@@ -177,18 +211,24 @@ EndProcedure
 Procedure LoadRandomFigure()
   Protected *RandomFigure.FIGURE
   Protected RandomWidth.a, RandomHeight.a
-  Protected RandomByte.a, i.i
+  Protected RandomBlock.BLOCK, i.i
+  Global LastFigureWasRandom.b
   
   RandomWidth = Random(4, 1)
   RandomHeight = Random(4, 1)
-  RandomByte = Random($FF, $10)
-  Dim RandomDataArr.a(RandomWidth * RandomHeight - 1)
+  RandomBlock\id = Random(Pow($FF, SizeOf(BLOCK)), $10)
+  Dim RandomDataArr.BLOCK(RandomWidth * RandomHeight - 1)
   
   For i = 0 To ArraySize(RandomDataArr())
-    If Random(1) : RandomDataArr(i) = RandomByte : EndIf
+    If Random(1) : RandomDataArr(i)\id = RandomBlock\id : EndIf
   Next
   *RandomFigure = CreateFigureAuto(CreateFrameFromA(RandomWidth, RandomHeight, RandomDataArr()))
   
+  If LastFigureWasRandom
+    FreeFigure(*FigureLoaded)
+  Else
+    LastFigureWasRandom = #True
+  EndIf
   LoadFigure(*RandomFigure)
   UpdateCaptions()
   RenderAll()
@@ -205,9 +245,9 @@ EndProcedure
 
 Procedure FillStackWithShit(*Stack.STACK)
   Protected i.i
-  For i = 0 To *Stack\Width * *Stack\Height - 1
-    If Random(4) = 3
-      PokeA(*Stack\Matrix + i, 100)
+  For i = 128 To *Stack\Width * *Stack\Height - 1
+    If Random(4) > 2
+      PokeBLOCK(*Stack\Matrix + i * SizeOf(BLOCK), 32)
     EndIf
   Next
 EndProcedure
@@ -215,6 +255,7 @@ EndProcedure
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Global *FigureLoaded
 Global *Stack.STACK = CreateStack(16, 16)
+Global LastFigureWasRandom.b = #False
 NewList AllFiguresList.FigureItem()
 
 Define Event.i
@@ -224,32 +265,29 @@ Define SelectedItem.i
 
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "T"
-AllFiguresList()\Figure = *TFigureA
+AllFiguresList()\Figure = *TFigure
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "L"
-AllFiguresList()\Figure = *LFigureA
+AllFiguresList()\Figure = *LFigure
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "F"
-AllFiguresList()\Figure = *FFigureA
+AllFiguresList()\Figure = *FFigure
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "Z"
-AllFiguresList()\Figure = *ZFigureA
+AllFiguresList()\Figure = *ZFigure
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "S"
-AllFiguresList()\Figure = *SFigureA
+AllFiguresList()\Figure = *SFigure
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "I"
-AllFiguresList()\Figure = *IFigureA
+AllFiguresList()\Figure = *IFigure
 AddElement(AllFiguresList())
 AllFiguresList()\Name = "O"
-AllFiguresList()\Figure = *OFigureA
-AddElement(AllFiguresList())
-AllFiguresList()\Name = "BUG"
-AllFiguresList()\Figure = *BUGFigureA
+AllFiguresList()\Figure = *OFigure
 
 OpenWindow_0()
 FillStackWithShit(*Stack)
-LoadFigure(*TFigureA)
+LoadFigure(*TFigure)
 LoadFiguresList(AllFiguresList())
 
 Repeat
@@ -269,12 +307,12 @@ Repeat
       
     Case Button_2
       If EventType() = #PB_EventType_LeftClick
-        RotateAndRender(#True)
+        RotateAndRender(#False)
       EndIf
       
     Case Button_3
       If EventType() = #PB_EventType_LeftClick
-        RotateAndRender(#False)
+        RotateAndRender(#True)
       EndIf
       
     Case Button_4
@@ -283,7 +321,9 @@ Repeat
       EndIf
       
     Case Button_8
-      LoadRandomFigure()
+      If EventType() = #PB_EventType_LeftClick
+        LoadRandomFigure()
+      EndIf
       
     Case Button_mvUp
       If EventType() = #PB_EventType_LeftClick
@@ -309,30 +349,31 @@ Repeat
       If EventType() = #PB_EventType_LeftClick
         SelectedItem = GetGadgetState(ListView_0)
         If SelectedItem <> -1 And SelectedItem <> LastListItem
+          LastFigureWasRandom = #False
           LoadFigure(GetGadgetItemData(ListView_0, SelectedItem))
         EndIf
       EndIf
   EndSelect
   
   ;{ CONTROL FROM KEYBOARD
-  If GetKeyState_(#VK_LEFT) < 0
+  If GetAsyncKeyState_(#VK_LEFT)
     MoveFigure(-1, 0)
   EndIf
-  If GetKeyState_(#VK_RIGHT) < 0
+  If GetAsyncKeyState_(#VK_RIGHT)
     MoveFigure(1, 0)
   EndIf
-  If GetKeyState_(#VK_UP) < 0
+  If GetAsyncKeyState_(#VK_UP)
     MoveFigure(0, -1)
   EndIf
-  If GetKeyState_(#VK_DOWN) < 0
+  If GetAsyncKeyState_(#VK_DOWN)
     MoveFigure(0, 1)
   EndIf
-  If GetKeyState_(#VK_Q) < 0
+  If GetAsyncKeyState_(#VK_Q)
     RotateAndRender(#False)
-  ElseIf GetKeyState_(#VK_E) < 0
+  ElseIf GetAsyncKeyState_(#VK_E)
     RotateAndRender(#True)
   EndIf
-  If GetKeyState_(#VK_R)
+  If GetAsyncKeyState_(#VK_R)
     LoadRandomFigure()
   EndIf
   ;}
@@ -342,8 +383,8 @@ Repeat
   EndIf 
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 59
-; FirstLine = 53
+; CursorPosition = 375
+; FirstLine = 342
 ; Folding = ----
 ; EnableUnicode
 ; EnableXP

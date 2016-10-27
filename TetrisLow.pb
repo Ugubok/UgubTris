@@ -2,9 +2,17 @@
 
 
 DeclareModule TetrisLow
+  
   ; =================================================================================
   ;-                               ОБЪЯВЛЕНИЯ СТРУКТУР                               
   ; =================================================================================
+  
+  ; ИЗ ЭТИХ БЛОКОВ СОСТОЯТ МАТРИЦЫ СТАКАНА И ФИГУР
+  ; ЭТА СТРУКТУРА СОЗДАНА ДЛЯ ПРОСТОГО ИЗМЕНЕНИЯ РАЗМЕРА ЭЛЕМЕНТОВ МАТРИЦЫ
+  ; (НЕТ СМЫСЛА ИСПОЛЬЗОВАТЬ ЕЕ ДЛЯ ЧЕГО-ТО КРОМЕ ИЗМЕРЕНИЯ РАЗМЕРА ЭЛЕМЕНТА МАТРИЦЫ)
+  Structure BLOCK
+    id.q
+  EndStructure
   
   ; СТАКАН
   Structure STACK
@@ -32,8 +40,45 @@ DeclareModule TetrisLow
     *DefaultFrame.FigureFrame
     X.a
     Y.a
+    ShadowY.a
   EndStructure
-  ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  
+  ; =================================================================================
+  ;-                                     МАКРОСЫ                                     
+  ; =================================================================================
+  
+  CompilerSelect SizeOf(BLOCK)
+    CompilerCase 1
+      Macro PeekBLOCK : PeekA : EndMacro
+      Macro PokeBLOCK : PokeA : EndMacro
+    CompilerCase 2
+      Macro PeekBLOCK : PeekU : EndMacro
+      Macro PokeBLOCK : PokeU : EndMacro
+    CompilerCase 4
+      Macro PeekBLOCK : PeekL : EndMacro
+      Macro PokeBLOCK : PokeL : EndMacro
+    CompilerCase 8
+      Macro PeekBLOCK : PeekQ : EndMacro
+      Macro PokeBLOCK : PokeQ : EndMacro
+    CompilerDefault
+      CompilerError "Unsupported matrix element size"
+  CompilerEndSelect
+  
+  Macro ReadStackXY(Stack, x, y)
+    PeekBLOCK(Stack\Matrix + (Stack\Width * (y) + (x)) * SizeOf(BLOCK))
+  EndMacro
+  
+  Macro ReadFrameXY(Frame, x, y)
+    PeekBLOCK(Frame\Data + (Frame\Width * (y) + (x)) * SizeOf(BLOCK))
+  EndMacro
+  
+  Macro WriteStackXY(Stack, x, y, Value)
+    PokeBLOCK(Stack\Matrix + (Stack\Width * (y) + (x)) * SizeOf(BLOCK), Value)
+  EndMacro
+  
+  Macro WriteFrameXY(Frame, x, y, Value)
+    PokeBLOCK(Frame\Data + (Frame\Width * (y) + (x)) * SizeOf(BLOCK), Value)
+  EndMacro
   
   ; =================================================================================
   ;-                               ОБЪЯВЛЕНИЯ ПРОЦЕДУР                               
@@ -43,6 +88,10 @@ DeclareModule TetrisLow
   ; @Returns: *STACK
   Declare CreateStack(Width.a, Height.a)
   
+  ; ОЧИЩАЕТ СТАКАН (ЗАПОЛНЯЕТ ЕГО МАТРИЦУ НУЛЯМИ)
+  ; @Returns: None
+  Declare ClearStack(*Stack.STACK)
+  
   ; ОСВОБОЖДАЕТ ПАМЯТЬ ОТ СТРУКТУРЫ STACK
   ; @Returns: None
   Declare FreeStack(*Stack.STACK)
@@ -50,11 +99,15 @@ DeclareModule TetrisLow
   ; СОЗДАЕТ ОДНО СОСТОЯНИЕ ФИГУРЫ (КАДР) ИЗ СТРОКИ
   ; Char2ByteDict ОПРЕДЕЛЯЕТ СООТВЕТСТВИЕ СИМВОЛА В СТРОКЕ String$ БАЙТУ В КАДРЕ
   ; @Returns: *FigureFrame
-  Declare CreateFrameFromS(Width.a, Height.a, Map Char2ByteDict.a(), String$)
+  Declare CreateFrameFromS(Width.a, Height.a, Map Char2ByteDict.BLOCK(), String$)
   
   ; СОЗДАЕТ ОДНО СОСТОЯНИЕ ФИГУРЫ (КАДР) ИЗ МАССИВА
   ; @Returns: *FigureFrame
-  Declare CreateFrameFromA(Width.a, Height.a, Array FrameData.a(1))
+  Declare CreateFrameFromA(Width.a, Height.a, Array FrameData.BLOCK(1))
+  
+  ; ОСВОБОЖДАЕТ ПАМЯТЬ ОТ СТРУКТУРЫ FigureFrame
+  ; @Returns: None
+  Declare FreeFrame(*Frame.FigureFrame)
   
   ;- LinkFrames - СВЯЗЫВАЕТ И ЗАЦИКЛИВАЕ  КАДРЫ ПО ПОРЯДКУ
   ; ЗАЦИКЛИВАЕТ ПЕРВЫЙ И ПОСЛЕДНИЙ МЕЖДУ СОБОЙ
@@ -72,6 +125,10 @@ DeclareModule TetrisLow
   ; @Returns: *FIGURE
   Declare CreateFigure(*DefaultFrame.FigureFrame, SetCenterAuto.b = #True)
   
+  ; ОСВОБОЖДАЕТ ПАМЯТЬ ОТ ФИГУРЫ И ВСЕХ ЕЕ КАДРОВ
+  ; @Returns: None
+  Declare FreeFigure(*Figure.FIGURE)
+  
   ; ПОВАРАЧИВАЕТ ФИГУРУ ВЛЕВО/ВПРАВО (ТЕХНИЧЕСКИ, ПРОСТО МЕНЯЕТ ТЕКУЩИЙ КАДР)
   ; ЗАТЕМ ОБНОВЛЯЕТ КООРДИНАТУ ФИГУРЫ ТАК, ЧТОБЫ ЦЕНТРЫ КАДРОВ СОШЛИСЬ В ОДНОЙ ТОЧКЕ
   ; ДЛЯ ПРОВЕРКИ ВЫХОДА ЗА ГРАНИЦЫ ПРИШЛОСЬ ДОБАВИТЬ АРГУМЕНТ *Stack
@@ -87,6 +144,10 @@ DeclareModule TetrisLow
   ; @Returns: 0 ЕСЛИ НЕ НАЛОЖИЛАСЬ, ЛЮБОЕ ДРУГОЕ ЗНАЧЕНИЕ ЕСЛИ НАЛОЖИЛАСЬ
   Declare CheckCollision(*Figure.FIGURE, *Stack.STACK)
   
+  ; ПРОВЕРЯЕТ НАХОДИТСЯ ЛИ ФИГУРА В ПРЕДЕЛАХ СТАКАНА
+  ; @Returns: #True ЕСЛИ ФИГУРА НЕ ВЫХОДИТ ЗА ПРЕДЕЛЫ СТАКАНА, ИНАЧЕ #False
+  Declare IsFigureInStackBounds(*Figure.FIGURE, *Stack.STACK)
+  
   ; ПРОВЕРКА ВОЗМОЖНОСТИ ПОВОРОТА ФИГУРЫ
   ; @Returns: 1 ЕСЛИ ВОЗМОЖНО, 0 ЕСЛИ НЕВОЗМОЖНО ПО ПРИЧИНЕ КОЛЛИЗИИ С БЛОКОМ
   ;           -1 ЕСЛИ НЕВОЗМОЖНО ПО ПРИЧИНЕ ВЫХОДА ЗА ГРАНИЦЫ СТАКАНА
@@ -94,38 +155,53 @@ DeclareModule TetrisLow
   
   ; ПРОВЕРЯЕТ ВОЗМОЖНОСТЬ СДВИГА ФИГУРЫ НА УКАЗАННОЕ РАССТОЯНИЕ
   ; УЧИТЫВАЕТ СТОЛКНОВЕНИЯ С БЛОКАМИ И ВЫХОД ЗА ГРАНИЦЫ СТАКАНА
+  ; @Returns: #True ЕСЛИ СДВИГ ВОЗМОЖЕН, ИНАЧЕ #False
   Declare IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b)
+  
+  ; РАСЧИТЫВАЕТ КООРДИНАТУ ТЕНИ ФИГУРЫ (ShadowY)
+  ; @Returns: None
+  Declare CalcShadowCoord(*Figure.FIGURE, *Stack.STACK)
+  
+  ; ДЕЛАЕТ "ОТПЕЧАТОК" ФИГУРЫ НА СТАКАНЕ (КОПИРУЕТ МАТРИЦУ ФИГУРЫ В СТАКАН)
+;   Declare MergeWithStack(*Figure.FIGURE, *Stack.STACK)
   
   ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 EndDeclareModule
 
+;- ========== РЕАЛИЗАЦИЯ ==========
 
 Module TetrisLow
   
   ; ПРЕДСТАВЛЯЕТ МАССИВ ПАМЯТИ КАК МАТРИЦУ УКАЗАННЫХ РАЗМЕРОВ
   ; СОЗДАЕТ НОВУЮ, ПОВЕРНУЮТУЮ ВЛЕВО/ВПРАВО МАТРИЦУ
+  ; MWidth, MHeight  -  ШИРИНА, ВЫСОТА МАТРИЦЫ
+  ; elSize           -  РАЗМЕР ЭЛЕМЕНТА МАТРИЦЫ В БАЙТАХ
+  ; *Matrix          -  УКАЗАТЕЛЬ НА ДАННЫЕ МАТРИЦЫ
+  ; RotateLeft       -  ЕСЛИ НЕ 0, МАТРИЦА ВРАЩАЕТСЯ ВЛЕВО; ИНАЧЕ ВПРАВО
   ; @Returns: *Matrix.a
-  Procedure _GetRotated90Matrix(MWidth.i, MHeight.i, *SourceMatrix, RotateLeft.a)
+  Procedure _GetRotated90Matrix(MWidth.i, MHeight.i, elSize.a, *Matrix, RotateLeft.a)
     Protected x.i, y.i, i.i
-    Protected *Matrix.Byte = AllocateMemory(MWidth * MHeight)
+    Protected *Rotated = AllocateMemory(MWidth * MHeight * elSize)
     
-    If RotateLeft
+    If RotateLeft = 0
       For x = 0 To MWidth-1
         For y = MHeight-1 To 0 Step -1
-          PokeA(*Matrix + i, PeekA(*SourceMatrix + MWidth * y + x))
+          CopyMemory(*Matrix + (MWidth * y + x) * elSize, *Rotated + i * elSize, elSize)
+;           PokeA(*Rotated + i * elSize, PeekA(*Matrix + (MWidth * y + x) * elSize))
           i + 1
         Next
       Next
     Else
       For x =  MWidth-1 To 0 Step -1
         For y = 0 To MHeight-1
-          PokeA(*Matrix + i, PeekA(*SourceMatrix + MWidth * y + x))
+          CopyMemory(*Matrix + (MWidth * y + x) * elSize, *Rotated + i * elSize, elSize)
+;           PokeA(*Rotated + i * elSize, PeekA(*Matrix + (MWidth * y + x) * elSize))
           i + 1
         Next
       Next
     EndIf
     
-    ProcedureReturn *Matrix
+    ProcedureReturn *Rotated
   EndProcedure
   
   
@@ -155,17 +231,22 @@ Module TetrisLow
       *Frame\YCenter = *Frame\Height / 2 + 1
     EndIf
     
+    ; ПРЕРОТАЦИЯ ВЛЕВО ЯВЛЯЕТСЯ НЕЖЕЛАТЕЛЬНОЙ, Т.К. С НЕЙ ЦЕНТР ВЕРТИКАЛЬНОЙ ФИГУРЫ I
+    ; СТАНОВИТСЯ СМЕЩЕННЫМ ВВЕРХ, ЧТО ОТЛИЧАЕТСЯ ОТ ПОВЕДЕНИЯ В СТАНДАРТНОМ ТЕТРИСЕ
+    CompilerIf Defined(TETRIS_PREROTATION_LEFT, #PB_Constant)
+      While *Frame\PrevFrame <> *Figure\DefaultFrame
+        *Frame = *Frame\PrevFrame
+        *Frame\XCenter = *Frame\NextFrame\YCenter
+        *Frame\YCenter = *Frame\Height - (*Frame\NextFrame\XCenter - 1)
+      Wend
+    CompilerElse
+      While *Frame\NextFrame <> *Figure\DefaultFrame
+        *Frame = *Frame\NextFrame
+        *Frame\XCenter = *Frame\Width - (*Frame\PrevFrame\YCenter - 1)
+        *Frame\YCenter = *Frame\PrevFrame\XCenter
+      Wend
+    CompilerEndIf
     
-    ;While *Frame\NextFrame <> *Figure\DefaultFrame
-    ;  *Frame = *Frame\NextFrame
-    ;  *Frame\XCenter = *Frame\Width - (*Frame\PrevFrame\YCenter - 1)
-    ;  *Frame\YCenter = *Frame\PrevFrame\XCenter
-    ;Wend
-    While *Frame\PrevFrame <> *Figure\DefaultFrame
-     *Frame = *Frame\PrevFrame
-     *Frame\XCenter = *Frame\Width - (*Frame\NextFrame\YCenter - 1)
-     *Frame\YCenter = *Frame\NextFrame\XCenter
-    Wend
     CompilerIf Defined(DEBUG_VERBOSITY_3, #PB_Constant)
       *Frame = *Figure\DefaultFrame
       Debug "TetrisLow::_CalcAndSetFigureCenter: Frame size: " +
@@ -178,10 +259,15 @@ Module TetrisLow
   Procedure CreateStack(Width.a, Height.a)
     Protected *Stack.STACK
     *Stack = AllocateStructure(STACK)
-    *Stack\Matrix = AllocateMemory(Width * Height)
+    *Stack\Matrix = AllocateMemory(Width * Height * SizeOf(BLOCK))
     *Stack\Width = Width
     *Stack\Height = Height
     ProcedureReturn *Stack
+  EndProcedure
+  
+  
+  Procedure ClearStack(*Stack.STACK)
+    FillMemory(*Stack\Matrix, *Stack\Width * *Stack\Height * SizeOf(BLOCK), 0)
   EndProcedure
   
   
@@ -191,8 +277,8 @@ Module TetrisLow
   EndProcedure
   
   
-  Procedure CreateFrameFromS(Width.a, Height.a, Map Char2ByteDict.a(), String$)
-    Protected Dim FrameData.a(Width * Height)
+  Procedure CreateFrameFromS(Width.a, Height.a, Map Char2ByteDict.BLOCK(), String$)
+    Protected Dim FrameData.BLOCK(Width * Height)
     Protected i.i
     ; ТРАНСЛИРУЕМ СТРОКУ В МАССИВ БАЙТОВ
     For i = 1 To Len(String$)
@@ -203,18 +289,24 @@ Module TetrisLow
   EndProcedure
   
   
-  Procedure CreateFrameFromA(Width.a, Height.a, Array FrameData.a(1))
+  Procedure CreateFrameFromA(Width.a, Height.a, Array FrameData.BLOCK(1))
     Protected *Frame.FigureFrame
     
     *Frame        = AllocateStructure(FigureFrame)
-    *Frame\Data   = AllocateMemory(Width * Height)
+    *Frame\Data   = AllocateMemory(Width * Height * SizeOf(BLOCK))
     *Frame\Width  = Width
     *Frame\Height = Height
     *Frame\NextFrame = *Frame
     *Frame\PrevFrame = *Frame
     
-    CopyMemory(@FrameData(0), *Frame\Data, Width * Height)
+    CopyMemory(@FrameData(0), *Frame\Data, Width * Height * SizeOf(BLOCK))
     ProcedureReturn *Frame
+  EndProcedure
+  
+  
+  Procedure FreeFrame(*Frame.FigureFrame)
+    FreeMemory(*Frame\Data)
+    FreeStructure(*Frame)
   EndProcedure
   
   
@@ -240,14 +332,14 @@ Module TetrisLow
     Protected *RotatedMatrix
     Protected W.a = *InitFrame\Width, H.a = *InitFrame\Height
     Protected *Frame90.FigureFrame, *Frame180.FigureFrame, *Frame270.FigureFrame
-    Protected FrameDataSize = W * H
+    Protected FrameDataSize = W * H * SizeOf(BLOCK)
     
     _LinkFramesSimple(*InitFrame, *InitFrame)
     *Figure = AllocateStructure(FIGURE)
     *Figure\DefaultFrame = *InitFrame
     *Figure\Frame = *InitFrame
     ; ПАПРОБУЕМ КАДР ПОВЕРНУТЫЙ ПО ЧАСОВОЙ СТРЕЛКЕ САЗДАТЬ
-    *RotatedMatrix = _GetRotated90Matrix(W, H, *InitFrame\Data, #False)
+    *RotatedMatrix = _GetRotated90Matrix(W, H, SizeOf(BLOCK), *InitFrame\Data, #False)
     ; СОВПАДАЮТ - ЗНАЧИТ ФИГУРА АБСОЛЮТНО СИММЕТРИЧНАЯ И МОЖНО НИЧО НЕ СОЗДАВАТЬ
     If W = H And CompareMemory(*InitFrame\Data, *RotatedMatrix, FrameDataSize)
       FreeMemory(*RotatedMatrix)
@@ -260,7 +352,7 @@ Module TetrisLow
     *Frame90\Data    = *RotatedMatrix
     LinkFrames(*InitFrame, *Frame90)
     ; ТИПЕРЬ САЗДАДАИМ ПОВЕРНУТУЮ НА 180
-    *RotatedMatrix = _GetRotated90Matrix(H, W, *Frame90\Data, #False)
+    *RotatedMatrix = _GetRotated90Matrix(H, W, SizeOf(BLOCK), *Frame90\Data, #False)
     ; СОВПАДАЮТ - ЗНАЧИТ ФИГРА НАПАЛАВИНУ СИММЕТРИЧНАЯ
     If CompareMemory(*InitFrame\Data, *RotatedMatrix, FrameDataSize)
       FreeMemory(*RotatedMatrix)
@@ -271,7 +363,7 @@ Module TetrisLow
     *Frame180\Width  = W
     *Frame180\Height = H
     *Frame180\Data   = *RotatedMatrix
-    *RotatedMatrix = _GetRotated90Matrix(W, H, *Frame180\Data, #False)
+    *RotatedMatrix = _GetRotated90Matrix(W, H, SizeOf(BLOCK), *Frame180\Data, #False)
     *Frame270 = AllocateStructure(FigureFrame)
     *Frame270\Width  = H
     *Frame270\Height = W
@@ -299,6 +391,16 @@ Module TetrisLow
   EndProcedure
   
   
+  Procedure FreeFigure(*Figure.FIGURE)
+    Protected *CurrentFrame.FigureFrame = *Figure\DefaultFrame
+    Repeat
+      *CurrentFrame = *CurrentFrame\NextFrame
+      FreeFrame(*CurrentFrame\PrevFrame)
+    Until *CurrentFrame = *Figure\DefaultFrame
+    FreeStructure(*Figure)
+  EndProcedure
+  
+  
   Procedure RotateWithCentering(*Figure.FIGURE, *Stack.STACK, RotateLeft.b = #True)
     Protected CurrentFrameCenter.Point, NewCoord.Point
     Protected *Last.FigureFrame, *Current.FigureFrame
@@ -315,9 +417,9 @@ Module TetrisLow
     If *Current <> *Last
       ; ЕСЛИ РАНЬШЕ НЕ ДЕЛАЛИ, РАСЧИТЫВАЕМ ГДЕ БУДЕТ ЦЕНТРАЛЬНАЯ ТОЧКА ПОСЛЕ ПОВОРОТА
       If (*Current\XCenter = 0) Or (*Current\YCenter = 0)
-        If RotateLeft = 0
+        If RotateLeft
           *Current\XCenter = *Last\YCenter
-          *Current\YCenter = *Last\Width - (*Last\XCenter - 1)
+          *Current\YCenter = *Current\Height - (*Last\XCenter - 1)
         Else
           *Current\XCenter = *Current\Width - (*Last\YCenter - 1)
           *Current\YCenter = *Last\XCenter
@@ -329,8 +431,7 @@ Module TetrisLow
       If (NewCoord\x < 0 Or (NewCoord\x + *Figure\Frame\Width) > (*Stack\Width-1)) Or
          (NewCoord\y < 0) Or (NewCoord\y + *Figure\Frame\Height) > (*Stack\Height-1)
         ; ОБКАКИВАЕМСЯ И ВОЗВРАЩАЕМ ВСЕ НАЗАД
-        ; СКАЖЫ ЕСЛИ ЗНАЕШ КАК ПАЛУЧШЕ СДЕЛОТЬ ОТРИЦАНИЕ
-        RotateLow(*Figure, #True ! RotateLeft)
+        RotateLow(*Figure, Bool(Not RotateLeft))
         ProcedureReturn #False
       EndIf
       
@@ -353,8 +454,8 @@ Module TetrisLow
   
   Procedure CheckCollision(*Figure.FIGURE, *Stack.STACK)
     Protected.a x, y
-    ; ВАЖНО, ЧТОБЫ Result БЫЛ НЕ МЕНЬШЕ int, ИНАЧЕ БИТЫ МОГУТ В НЕГО НЕ ПОПАСТЬ
-    Protected.i Result, FramePos, StackPos
+    Protected Result.BLOCK
+    Protected StackByte.BLOCK
     Protected *F.FigureFrame = *Figure\Frame
     
     ; НУЖНО ПРОВЕРИТЬ НЕ ВЫХОДИТ ЛИ ФИГУРА ЗА РАМКИ СТАКАНА
@@ -364,19 +465,26 @@ Module TetrisLow
       ProcedureReturn 1
     EndIf
     
-    Repeat
+    For y = 0 To *F\Height - 1
       For x = 0 To *F\Width-1
-        FramePos = *F\Width * y + x
-        StackPos = (*Figure\Y + y) * *Stack\Width + *Figure\X + x
-        Result | (PeekA(*F\Data + FramePos) & PeekA(*Stack\Matrix + StackPos))
-        Debug Str(FramePos) + "F is " + Str(StackPos) + "S.  Result: " + 
-              Str(Result) + " (F: " + Hex(PeekA(*F\Data + FramePos)) + 
-              ", S: " + Hex(PeekA(*Stack\Matrix + StackPos)) + ")"
+        StackByte\id = ReadStackXY(*Stack, *Figure\X + x, *Figure\Y + y)
+        Result\id | (Bool(ReadFrameXY(*F, x, y)) & Bool(StackByte\id))
       Next
-      y + 1
-    Until y = *F\Height
-    Debug "=========================="
-    ProcedureReturn Result
+    Next
+    ProcedureReturn Result\id
+  EndProcedure
+  
+  
+  Procedure IsFigureInStackBounds(*Figure.FIGURE, *Stack.STACK)
+    Protected.a RX, RY
+    
+    RX = *Figure\X + *Figure\Frame\Width - 1
+    RY = *Figure\Y + *Figure\Frame\Height - 1
+    If *Figure\Y >= 0 And *Figure\X >= 0 And RY < *Stack\Height And RX < *Stack\Width
+      ProcedureReturn #True
+    EndIf
+    
+    ProcedureReturn #False
   EndProcedure
   
   
@@ -385,7 +493,7 @@ Module TetrisLow
     ; ЕСЛИ ПОВЕРНУЛАСЬ - ПРОВЕРЯЕМ НА КОЛЛИЗИЮ; ЕСЛИ НЕТ - ЗНАЧИТ ВЫШЛА ЗА ГРАНИЦЫ
     If RotateWithCentering(*Figure, *Stack, RotateLeft)
       
-      RotateWithCentering(*Figure, *Stack, #True ! RotateLeft)
+      RotateWithCentering(*Figure, *Stack, Bool(Not RotateLeft))
     Else
       ProcedureReturn -1
     EndIf
@@ -400,29 +508,26 @@ Module TetrisLow
     
     If CheckCollision(*Figure, *Stack)
       Result = #False
-      Debug "Can't move because collision"
-    ElseIf ((*Figure\Y + *Figure\Frame\Height) < *Stack\Height+1) And (*Figure\Y >= 0) And
-           ((*Figure\X + *Figure\Frame\Width) < *Stack\Width+1) And (*Figure\X >= 0)
+    ElseIf IsFigureInStackBounds(*Figure, *Stack)
       Result = #True
     Else
       Result = #False
-      Debug "Can't move because out of bounds"
-      If (*Figure\Y + *Figure\Frame\Height) < *Stack\Height-1
-        Debug "(*Figure\Y + *Figure\Frame\Height) < *Stack\Height-1   True"
-      EndIf
-      If (*Figure\Y >= 0)
-        Debug "(*Figure\Y >= 0) True"
-      EndIf
-      If ((*Figure\X + *Figure\Frame\Width) < *Stack\Width-1)
-        Debug "((*Figure\X + *Figure\Frame\Width) < *Stack\Width-1) True"
-      EndIf
-      If (*Figure\X >= 0)
-        Debug "(*Figure\X >= 0) True"
-      EndIf
     EndIf
     *Figure\X - DeltaX
     *Figure\Y - DeltaY
     ProcedureReturn Result
+  EndProcedure
+  
+  
+  Procedure CalcShadowCoord(*Figure.FIGURE, *Stack.STACK)
+    Protected FigureY.a
+    
+    FigureY = *Figure\Y
+    While Not CheckCollision(*Figure, *Stack)
+      *Figure\Y + 1
+    Wend
+    *Figure\ShadowY = *Figure\Y - 1
+    *Figure\Y = FigureY
   EndProcedure
   
 EndModule
@@ -439,8 +544,7 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 85
-; FirstLine = 80
-; Folding = ----
+; CursorPosition = 13
+; Folding = ----0--
 ; EnableUnicode
 ; EnableXP

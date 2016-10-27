@@ -7,34 +7,41 @@
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2016-10-22 00:29" user="root" host="PHENOM"/>
+    <lastopen date="2016-10-27 11:10" user="root" host="PHENOM"/>
   </section>
   <section name="files">
     <file name="DefaultFigures.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="3918baa51f09b4e9cbe15580cfe89545"/>
+      <fingerprint md5="21958a7ebe4d26ddb3c522a62930ff09"/>
     </file>
     <file name="TetrisDebug.pb">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+"/>
     </file>
     <file name="TetrisDebug.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="16e9dca5b360a09b22f4e0010baa48d0"/>
+      <fingerprint md5="752445eb269ed97c377b182e87c1113e"/>
     </file>
     <file name="TetrisLow.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="e55a26c81fc8cc1ed28beb7ad244cefc"/>
+      <fingerprint md5="1582f20ee9babce31cd86317c4a373cb"/>
+    </file>
+    <file name="TetrisMid.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="16cbb2ea902fa5756825231374149e86"/>
     </file>
   </section>
   <section name="targets">
     <target name="Default Target" enabled="1" default="1">
       <inputfile value="TetrisDebug.pb"/>
       <outputfile value=""/>
-      <options unicode="1" xpskin="1" debug="1"/>
-      <compilecount enable="1" value="90"/>
-      <buildcount enable="1" value="0"/>
+      <executable value="008_debug_shadows_onerror.exe"/>
+      <options unicode="1" xpskin="1" onerror="1" debug="1"/>
+      <purifier enable="1" granularity="1,1,1,1"/>
+      <compilecount enable="1" value="359"/>
+      <buildcount enable="1" value="8"/>
       <constants>
-        <constant value="#DEBUG_VERBOSITY_3=" enable="0"/>
+        <constant value="#TETRIS_PREROTATION_LEFT =" enable="1"/>
+        <constant value="#DEBUG_VERBOSITY_3 =" enable="0"/>
       </constants>
     </target>
   </section>
