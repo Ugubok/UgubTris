@@ -11,7 +11,7 @@ DeclareModule TetrisLow
   ; ЭТА СТРУКТУРА СОЗДАНА ДЛЯ ПРОСТОГО ИЗМЕНЕНИЯ РАЗМЕРА ЭЛЕМЕНТОВ МАТРИЦЫ
   ; (НЕТ СМЫСЛА ИСПОЛЬЗОВАТЬ ЕЕ ДЛЯ ЧЕГО-ТО КРОМЕ ИЗМЕРЕНИЯ РАЗМЕРА ЭЛЕМЕНТА МАТРИЦЫ)
   Structure BLOCK
-    id.i
+    id.a
   EndStructure
   
   ; СТАКАН
@@ -141,7 +141,8 @@ DeclareModule TetrisLow
   
   ; ПРОВЕРЯЕТ НЕ НАЛОЖИЛАСЬ ЛИ ФИГУРА НА КАКОЙ-ЛИБО БЛОК В СТАКАНЕ
   ; НАЛОЖЕНИЕМ ТАКЖЕ СЧИТАЕТСЯ ВЫХОД ЗА ГРАНИЦЫ СТАКАНА
-  ; @Returns: 0 ЕСЛИ НЕ НАЛОЖИЛАСЬ, ЛЮБОЕ ДРУГОЕ ЗНАЧЕНИЕ ЕСЛИ НАЛОЖИЛАСЬ
+  ; @Returns: 0 ЕСЛИ НЕ НАЛОЖИЛАСЬ, -1 ЕСЛИ ВЫШЛА ЗА ПРЕДЕЛЫ СТАКАНА
+  ;           ЛЮБОЕ ДРУГОЕ ЗНАЧЕНИЕ ЕСЛИ НАЛОЖИЛАСЬ
   Declare CheckCollision(*Figure.FIGURE, *Stack.STACK)
   
   ; ПРОВЕРЯЕТ НАХОДИТСЯ ЛИ ФИГУРА В ПРЕДЕЛАХ СТАКАНА
@@ -163,7 +164,13 @@ DeclareModule TetrisLow
   Declare CalcShadowCoord(*Figure.FIGURE, *Stack.STACK)
   
   ; ДЕЛАЕТ "ОТПЕЧАТОК" ФИГУРЫ НА СТАКАНЕ (КОПИРУЕТ МАТРИЦУ ФИГУРЫ В СТАКАН)
-;   Declare MergeWithStack(*Figure.FIGURE, *Stack.STACK)
+  Declare MergeWithStack(*Figure.FIGURE, *Stack.STACK)
+  
+  ; НАХОДИТ И УДАЛЯЕТ ЗАПОЛНЕННЫЕ ЛИНИИ В СТАКАНЕ
+  ; List BurnedY()   -   СЮДА ЗАПИШУТСЯ КООРДИНАТЫ Y УДАЛЕННЫХ ЛИНИЙ
+  ; StartY, EndY     -   КООРДИНАТЫ НАЧАЛА И КОНЦА ПОИСКА ЗАПОЛНЕННЫХ ЛИНИЙ
+  ; @Returns: КОЛИЧЕСТВО УДАЛЕННЫХ ЛИНИЙ
+  Declare BurnFilledLines(*Stack.STACK, List BurnedY.a(), StartY.a=0, EndY.i=-1)
   
   ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 EndDeclareModule
@@ -461,7 +468,7 @@ Module TetrisLow
     ; НУЖНО ПРОВЕРИТЬ НЕ ВЫХОДИТ ЛИ ФИГУРА ЗА РАМКИ СТАКАНА
     ; ИНАЧЕ МОЖЕМ ОБРАТИТЬСЯ К ПАМЯТИ ЗА ПРЕДЕЛАМИ СТАКАНА
     If Not IsFigureInStackBounds(*Figure, *Stack)
-      ProcedureReturn 1
+      ProcedureReturn -1
     EndIf
     
     For y = 0 To *F\Height - 1
@@ -488,14 +495,18 @@ Module TetrisLow
   
   
   Procedure IsRotationPossible(*Figure.FIGURE, *Stack.STACK, RotateLeft.b = #True)
-    Protected Result.b
+    Protected Result.b = #True
     ; ЕСЛИ ПОВЕРНУЛАСЬ - ПРОВЕРЯЕМ НА КОЛЛИЗИЮ; ЕСЛИ НЕТ - ЗНАЧИТ ВЫШЛА ЗА ГРАНИЦЫ
     If RotateWithCentering(*Figure, *Stack, RotateLeft)
-      ; TODO: ДОДЕЛАТЬ ЕТУ ПРОЦЕДУРУ
+      If CheckCollision(*Figure, *Stack)
+        Result = #False
+      EndIf
       RotateWithCentering(*Figure, *Stack, Bool(Not RotateLeft))
     Else
       ProcedureReturn -1
     EndIf
+    
+    ProcedureReturn Result
   EndProcedure
   
   
@@ -530,22 +541,56 @@ Module TetrisLow
     *Figure\Y = FigureY
   EndProcedure
   
+  
+  Procedure MergeWithStack(*Figure.FIGURE, *Stack.STACK)
+    Protected.a x, y
+    Protected *F.FigureFrame = *Figure\Frame
+    Protected FigureBlock.BLOCK
+    
+    For y = 0 To *F\Height-1
+      For x = 0 To *F\Width-1
+        FigureBlock\id = ReadFrameXY(*F, x, y)
+        If FigureBlock\id
+          WriteStackXY(*Stack, *Figure\X+x, *Figure\Y+y, FigureBlock\id)
+        EndIf
+      Next
+    Next
+  EndProcedure
+  
+  
+  Procedure BurnFilledLines(*Stack.STACK, List BurnedY.a(), StartY.a=0, EndY.i=-1)
+    Protected y.a, x.a, BurnThis.b, BurnedCount.a
+    Protected LineSize.i = *Stack\Width * SizeOf(BLOCK)
+    
+    If EndY = -1
+      EndY = *Stack\Height-1
+    EndIf
+    
+    For y = StartY To EndY
+      BurnThis = #True
+      For x = 0 To *Stack\Width-1
+        If ReadStackXY(*Stack, x, y) = 0
+          BurnThis = #False
+          Break
+        EndIf
+      Next
+      If BurnThis
+        BurnedCount + 1
+        AddElement(BurnedY())
+        BurnedY() = y
+        ; ТИХА, СИЧА БУДИТ САМОЕ ИНТИРЕСНОЕ МЕСТО
+        Debug "Move " + Str(LineSize) + " bytes from " + Hex(*Stack) + " To " + Hex(*Stack+LineSize)
+        MoveMemory(*Stack, *Stack+LineSize, LineSize)
+        FillMemory(*Stack, LineSize, 0)
+      EndIf
+    Next
+    ProcedureReturn BurnedCount
+  EndProcedure
+  
 EndModule
-
-
-
-
-
-
-
-
-
-
-
-
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 440
-; FirstLine = 394
+; CursorPosition = 581
+; FirstLine = 549
 ; Folding = ----0--
 ; EnableUnicode
 ; EnableXP

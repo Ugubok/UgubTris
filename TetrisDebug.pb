@@ -195,9 +195,11 @@ Procedure OnResetButtonDown()
 EndProcedure
 
 Procedure RotateAndRender(RotateLeft.b = #True)
-  RotateWithCentering(*FigureLoaded, *Stack, RotateLeft)
-  UpdateCaptions()
-  RenderAll()
+  If IsRotationPossible(*FigureLoaded, *Stack)
+    RotateWithCentering(*FigureLoaded, *Stack, RotateLeft)
+    UpdateCaptions()
+    RenderAll()
+  EndIf
 EndProcedure
 
 Procedure LoadFiguresList(List FiguresList.FigureItem())
@@ -252,6 +254,28 @@ Procedure FillStackWithShit(*Stack.STACK)
       EndIf
     Next
   Next
+EndProcedure
+
+Procedure MergeFigure()
+  MergeWithStack(*FigureLoaded, *Stack)
+  While CheckCollision(*FigureLoaded, *Stack)
+    *FigureLoaded\X + 1
+    If Not IsFigureInStackBounds(*FigureLoaded, *Stack)
+      *FigureLoaded\X - 1
+      Break
+    EndIf
+  Wend
+  RenderAll()
+EndProcedure
+
+Procedure BurnLines()
+  Protected NewList BurnedLines.a()
+  BurnFilledLines(*Stack, BurnedLines())
+  ForEach BurnedLines()
+    Box(0, BurnedLines() * (#SQARE_SIZE + #PADDING), 300, #SQARE_SIZE, $0000FF)
+  Next
+  Delay(300)
+  RenderAll()
 EndProcedure
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -372,6 +396,13 @@ Repeat
     LoadRandomFigure()
     Delay(50)
   EndIf
+  If GetAsyncKeyState_(#VK_SPACE)
+    MergeFigure()
+    Delay(100)
+  EndIf
+  If GetAsyncKeyState_(#VK_B)
+    BurnLines()
+  EndIf
   ;}
   
   If Not Window_0_Events(Event)
@@ -379,8 +410,8 @@ Repeat
   EndIf 
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 248
-; FirstLine = 231
+; CursorPosition = 277
+; FirstLine = 264
 ; Folding = ----
 ; EnableUnicode
 ; EnableXP
