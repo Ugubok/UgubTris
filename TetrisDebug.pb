@@ -244,11 +244,13 @@ Procedure MoveFigure(DeltaX.i, DeltaY.i)
 EndProcedure
 
 Procedure FillStackWithShit(*Stack.STACK)
-  Protected i.i
-  For i = 128 To *Stack\Width * *Stack\Height - 1
-    If Random(4) > 2
-      PokeBLOCK(*Stack\Matrix + i * SizeOf(BLOCK), 32)
-    EndIf
+  Protected.a x, y
+  For y = 5 To *Stack\Height-1
+    For x = 0 To *Stack\Width-6
+      If Random(4) > 2
+        WriteStackXY(*Stack, x, y, 32)
+      EndIf
+    Next
   Next
 EndProcedure
 
@@ -291,90 +293,84 @@ LoadFigure(*TFigure)
 LoadFiguresList(AllFiguresList())
 
 Repeat
-  Event = WaitWindowEvent()
+  Event = WindowEvent()
   
-  Select EventGadget()
-    Case TrackBar_0
-      If GetGadgetState(TrackBar_0) <> LastTrackBarPos
-        LastTrackBarPos = GetGadgetState(TrackBar_0)
-        OnTrackbarUpdate()
-      EndIf
-      
-    Case Button_0
-      If EventType() = #PB_EventType_LeftClick
+  If EventType() = #PB_EventType_MouseMove
+    Continue
+  EndIf
+  
+  If EventGadget() = TrackBar_0
+    If GetGadgetState(TrackBar_0) <> LastTrackBarPos
+      LastTrackBarPos = GetGadgetState(TrackBar_0)
+      OnTrackbarUpdate()
+    EndIf
+  EndIf
+  
+  If EventType() = #PB_EventType_LeftClick
+    Select EventGadget()     
+      Case Button_0
         OnResetButtonDown()
-      EndIf
-      
-    Case Button_2
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_2
         RotateAndRender(#False)
-      EndIf
-      
-    Case Button_3
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_3
         RotateAndRender(#True)
-      EndIf
-      
-    Case Button_4
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_4
         SetDefaultFrame()
-      EndIf
-      
-    Case Button_8
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_8
         LoadRandomFigure()
-      EndIf
-      
-    Case Button_mvUp
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_mvUp
         MoveFigure(0, -1)
-      EndIf
-      
-    Case Button_mvDown
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_mvDown
         MoveFigure(0, 1)
-      EndIf
-      
-    Case Button_mvLeft
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_mvLeft
         MoveFigure(-1, 0)
-      EndIf
-      
-    Case Button_mvRight
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case Button_mvRight
         MoveFigure(1, 0)
-      EndIf
-      
-    Case ListView_0
-      If EventType() = #PB_EventType_LeftClick
+        
+      Case ListView_0
         SelectedItem = GetGadgetState(ListView_0)
         If SelectedItem <> -1 And SelectedItem <> LastListItem
           LastFigureWasRandom = #False
           LoadFigure(GetGadgetItemData(ListView_0, SelectedItem))
         EndIf
-      EndIf
-  EndSelect
+    EndSelect
+  EndIf
   
   ;{ CONTROL FROM KEYBOARD
   If GetAsyncKeyState_(#VK_LEFT)
     MoveFigure(-1, 0)
+    Delay(50)
   EndIf
   If GetAsyncKeyState_(#VK_RIGHT)
     MoveFigure(1, 0)
+    Delay(50)
   EndIf
   If GetAsyncKeyState_(#VK_UP)
     MoveFigure(0, -1)
+    Delay(50)
   EndIf
   If GetAsyncKeyState_(#VK_DOWN)
     MoveFigure(0, 1)
+    Delay(50)
   EndIf
   If GetAsyncKeyState_(#VK_Q)
     RotateAndRender(#False)
+    Delay(50)
   ElseIf GetAsyncKeyState_(#VK_E)
     RotateAndRender(#True)
+    Delay(50)
   EndIf
   If GetAsyncKeyState_(#VK_R)
     LoadRandomFigure()
+    Delay(50)
   EndIf
   ;}
   
@@ -383,8 +379,8 @@ Repeat
   EndIf 
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 375
-; FirstLine = 342
+; CursorPosition = 248
+; FirstLine = 231
 ; Folding = ----
 ; EnableUnicode
 ; EnableXP
