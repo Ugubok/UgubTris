@@ -9,7 +9,7 @@
 
 Global Window_0
 
-Global Canvas_0, Text_0, Text_1, TrackBar_0, Text_2, Text_3, Button_0, Button_2, Button_3, Button_4, ListView_0, Button_8, Button_mvLeft, Button_mvRight, Button_mvDown, Button_mvUp, Text_CollisionSign
+Global Canvas_0, Text_0, Text_1, TrackBar_0, Text_2, Text_3, Button_0, Button_2, Button_3, Button_4, ListView_0, Button_8, Button_mvLeft, Button_mvRight, Button_mvDown, Button_mvUp, Text_CollisionSign, Checkbox_0
 
 Enumeration FormFont
   #Font_Window_0_0
@@ -50,6 +50,7 @@ Procedure OpenWindow_0(x = 0, y = 0, width = 290, height = 310)
   HideGadget(Text_CollisionSign, 1)
   SetGadgetColor(Text_CollisionSign, #PB_Gadget_FrontColor,RGB(255,0,0))
   SetGadgetFont(Text_CollisionSign, FontID(#Font_Window_0_3))
+  Checkbox_0 = CheckBoxGadget(#PB_Any, 190, 220, 90, 25, "Ignore collision")
 EndProcedure
 
 Procedure Window_0_Events(event)

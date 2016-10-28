@@ -11,7 +11,7 @@ DeclareModule TetrisLow
   ; ЭТА СТРУКТУРА СОЗДАНА ДЛЯ ПРОСТОГО ИЗМЕНЕНИЯ РАЗМЕРА ЭЛЕМЕНТОВ МАТРИЦЫ
   ; (НЕТ СМЫСЛА ИСПОЛЬЗОВАТЬ ЕЕ ДЛЯ ЧЕГО-ТО КРОМЕ ИЗМЕРЕНИЯ РАЗМЕРА ЭЛЕМЕНТА МАТРИЦЫ)
   Structure BLOCK
-    id.a
+    id.i
   EndStructure
   
   ; СТАКАН
@@ -156,8 +156,10 @@ DeclareModule TetrisLow
   
   ; ПРОВЕРЯЕТ ВОЗМОЖНОСТЬ СДВИГА ФИГУРЫ НА УКАЗАННОЕ РАССТОЯНИЕ
   ; УЧИТЫВАЕТ СТОЛКНОВЕНИЯ С БЛОКАМИ И ВЫХОД ЗА ГРАНИЦЫ СТАКАНА
+  ; ПРИ УСТАНОВКЕ IgnoreBlocks В #True - НЕ УЧИТЫВАЕТ СТОЛКНОВЕНИЯ С БЛОКАМИ
   ; @Returns: #True ЕСЛИ СДВИГ ВОЗМОЖЕН, ИНАЧЕ #False
-  Declare IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b)
+  Declare IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b, 
+                         IgnoreBlocks.b = #False)
   
   ; РАСЧИТЫВАЕТ КООРДИНАТУ ТЕНИ ФИГУРЫ (ShadowY)
   ; @Returns: None
@@ -510,20 +512,21 @@ Module TetrisLow
   EndProcedure
   
   
-  Procedure IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b)
+  Procedure IsMovePossible(*Figure.FIGURE, *Stack.STACK, DeltaX.b, DeltaY.b,
+                           IgnoreBlocks.b = #False)
     Protected Result.b
     
     *Figure\X + DeltaX
     *Figure\Y + DeltaY
     
-    If CheckCollision(*Figure, *Stack)
-      Result = #False
-    ; НЕТ НУЖДЫ ПРОВЕРЯТЬ ВЫХОД ЗА ГРАНИЦЫ СТАКАНА, CheckCollision() ИТАК ДЕЛАЕТ ЭТО
-    ; ElseIf IsFigureInStackBounds(*Figure, *Stack)
-    ;  Result = #True
-    Else
-      Result = #True
-    EndIf
+    Select CheckCollision(*Figure, *Stack)
+      Case -1  ; ВЫШЛО ЗА ПРЕДЕЛЫ СТАКАНА
+        Result = #False
+      Case 0   ; НЕТ КОЛЛИЗИИ
+        Result = #True
+      Default  ; ЕСТЬ КОЛЛИЗИЯ
+        Result = IgnoreBlocks
+    EndSelect
     *Figure\X - DeltaX
     *Figure\Y - DeltaY
     ProcedureReturn Result
@@ -534,6 +537,7 @@ Module TetrisLow
     Protected FigureY.a
     
     FigureY = *Figure\Y
+    *Figure\Y + 1
     While Not CheckCollision(*Figure, *Stack)
       *Figure\Y + 1
     Wend
@@ -579,18 +583,20 @@ Module TetrisLow
         AddElement(BurnedY())
         BurnedY() = y
         ; ТИХА, СИЧА БУДИТ САМОЕ ИНТИРЕСНОЕ МЕСТО
-        Debug "Move " + Str(LineSize) + " bytes from " + Hex(*Stack) + " To " + Hex(*Stack+LineSize)
-        MoveMemory(*Stack, *Stack+LineSize, LineSize)
-        FillMemory(*Stack, LineSize, 0)
+        If y > 0
+          MoveMemory(*Stack\Matrix, *Stack\Matrix+LineSize, LineSize*y)
+        EndIf
+        FillMemory(*Stack\Matrix, LineSize)
       EndIf
     Next
     ProcedureReturn BurnedCount
   EndProcedure
   
 EndModule
+
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 581
-; FirstLine = 549
+; CursorPosition = 539
+; FirstLine = 512
 ; Folding = ----0--
 ; EnableUnicode
 ; EnableXP

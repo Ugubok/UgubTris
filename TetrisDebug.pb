@@ -85,7 +85,7 @@ Procedure RenderStack()
   StartDrawing(CanvasOutput(Canvas_0))  
   For y = 0 To *Stack\Height-1
     For x = 0 To *Stack\Width-1
-      color = TrueColor8bit(ReadStackXY(*Stack, x, y))
+      color = ReadStackXY(*Stack, x, y)
       RenderX = #MARGIN + #PADDING*x + #SQARE_SIZE*x
       RenderY = #MARGIN + #PADDING*y + #SQARE_SIZE*y
       If color
@@ -110,7 +110,7 @@ Procedure RenderFigure()
     CalcShadowCoord(*FigureLoaded, *Stack)
     For y = *FigureLoaded\ShadowY To *FigureLoaded\ShadowY + *FigureLoaded\Frame\Height - 1
       For x = 0 To *FigureLoaded\Frame\Width - 1
-        color = TrueColor8bit(PeekBLOCK(*FigureLoaded\Frame\Data + i * SizeOf(BLOCK)))
+        color = PeekBLOCK(*FigureLoaded\Frame\Data + i * SizeOf(BLOCK))
         tx = x + *FigureLoaded\X
         ty = y
         RenderX = #MARGIN + #PADDING*tx + #SQARE_SIZE*tx
@@ -218,7 +218,7 @@ Procedure LoadRandomFigure()
   
   RandomWidth = Random(4, 1)
   RandomHeight = Random(4, 1)
-  RandomBlock\id = Random(Pow($FF, SizeOf(BLOCK)), $10)
+  RandomBlock\id = Random($FFFF, $10)
   Dim RandomDataArr.BLOCK(RandomWidth * RandomHeight - 1)
   
   For i = 0 To ArraySize(RandomDataArr())
@@ -237,7 +237,7 @@ Procedure LoadRandomFigure()
 EndProcedure
 
 Procedure MoveFigure(DeltaX.i, DeltaY.i)
-  If *FigureLoaded And IsMovePossible(*FigureLoaded, *Stack, DeltaX, DeltaY)
+  If *FigureLoaded And IsMovePossible(*FigureLoaded, *Stack, DeltaX, DeltaY, GetGadgetState(Checkbox_0))
     *FigureLoaded\X + DeltaX
     *FigureLoaded\Y + DeltaY
     UpdateCaptions()
@@ -256,6 +256,26 @@ Procedure FillStackWithShit(*Stack.STACK)
   Next
 EndProcedure
 
+Procedure _DebugStack(*Stack.STACK)
+  ; ЕТА ПРОЦЕДУРА НЕ ИСПОЛЬЗУЕТСЯ СИЧАС НИХДЕ
+  Protected.a x, y
+  Protected blk.BLOCK, str$
+  
+  For y = 0 To *Stack\Height-1
+    str$ = ""
+    For x = 0 To *Stack\Width-1
+      blk\id = ReadStackXY(*Stack, x, y)
+      If Len(Hex(blk\id)) = 1
+        str$ + "0" + Hex(blk\id) + " "
+      Else
+        str$ + Hex(blk\id) + " "
+      EndIf
+    Next
+    Debug str$
+  Next
+  Debug "---------------------------------------"
+EndProcedure
+  
 Procedure MergeFigure()
   MergeWithStack(*FigureLoaded, *Stack)
   While CheckCollision(*FigureLoaded, *Stack)
@@ -271,9 +291,11 @@ EndProcedure
 Procedure BurnLines()
   Protected NewList BurnedLines.a()
   BurnFilledLines(*Stack, BurnedLines())
+  StartDrawing(CanvasOutput(Canvas_0))
   ForEach BurnedLines()
     Box(0, BurnedLines() * (#SQARE_SIZE + #PADDING), 300, #SQARE_SIZE, $0000FF)
   Next
+  StopDrawing()
   Delay(300)
   RenderAll()
 EndProcedure
@@ -312,7 +334,7 @@ AllFiguresList()\Name = "O"
 AllFiguresList()\Figure = *OFigure
 
 OpenWindow_0()
-FillStackWithShit(*Stack)
+;FillStackWithShit(*Stack)
 LoadFigure(*TFigure)
 LoadFiguresList(AllFiguresList())
 
@@ -410,8 +432,8 @@ Repeat
   EndIf 
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 277
-; FirstLine = 264
+; CursorPosition = 220
+; FirstLine = 208
 ; Folding = ----
 ; EnableUnicode
 ; EnableXP
