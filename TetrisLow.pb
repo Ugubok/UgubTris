@@ -11,7 +11,7 @@ DeclareModule TetrisLow
   ; ЭТА СТРУКТУРА СОЗДАНА ДЛЯ ПРОСТОГО ИЗМЕНЕНИЯ РАЗМЕРА ЭЛЕМЕНТОВ МАТРИЦЫ
   ; (НЕТ СМЫСЛА ИСПОЛЬЗОВАТЬ ЕЕ ДЛЯ ЧЕГО-ТО КРОМЕ ИЗМЕРЕНИЯ РАЗМЕРА ЭЛЕМЕНТА МАТРИЦЫ)
   Structure BLOCK
-    id.q
+    id.i
   EndStructure
   
   ; СТАКАН
@@ -402,7 +402,7 @@ Module TetrisLow
   
   
   Procedure RotateWithCentering(*Figure.FIGURE, *Stack.STACK, RotateLeft.b = #True)
-    Protected CurrentFrameCenter.Point, NewCoord.Point
+    Protected CurrentFrameCenter.Point, LastCoord.Point
     Protected *Last.FigureFrame, *Current.FigureFrame
     
     If (*Figure\Frame\XCenter = 0) Or (*Figure\Frame\YCenter = 0)
@@ -425,18 +425,18 @@ Module TetrisLow
           *Current\YCenter = *Last\XCenter
         EndIf
       EndIf
-      NewCoord\x = *Figure\X + *Last\XCenter - *Current\XCenter
-      NewCoord\y = *Figure\Y + *Last\YCenter - *Current\YCenter
+      LastCoord\x = *Figure\X
+      LastCoord\y = *Figure\Y
+      *Figure\X = *Figure\X + *Last\XCenter - *Current\XCenter
+      *Figure\Y = *Figure\Y + *Last\YCenter - *Current\YCenter
       ; ПРОВЕРКА ВЫХОДА ФИГУРЫ ЗА ГРАНИЦЫ СТАКАНА
-      If (NewCoord\x < 0 Or (NewCoord\x + *Figure\Frame\Width) > (*Stack\Width-1)) Or
-         (NewCoord\y < 0) Or (NewCoord\y + *Figure\Frame\Height) > (*Stack\Height-1)
+      If Not IsFigureInStackBounds(*Figure, *Stack)
         ; ОБКАКИВАЕМСЯ И ВОЗВРАЩАЕМ ВСЕ НАЗАД
+        *Figure\X = LastCoord\x
+        *Figure\Y = LastCoord\y
         RotateLow(*Figure, Bool(Not RotateLeft))
         ProcedureReturn #False
       EndIf
-      
-      *Figure\X = NewCoord\x
-      *Figure\Y = NewCoord\y
     EndIf
     
     ProcedureReturn #True
@@ -460,8 +460,7 @@ Module TetrisLow
     
     ; НУЖНО ПРОВЕРИТЬ НЕ ВЫХОДИТ ЛИ ФИГУРА ЗА РАМКИ СТАКАНА
     ; ИНАЧЕ МОЖЕМ ОБРАТИТЬСЯ К ПАМЯТИ ЗА ПРЕДЕЛАМИ СТАКАНА
-    If ((*Figure\Y + *F\Height) > *Stack\Height+1) Or (*Figure\Y < 0) Or
-       ((*Figure\X + *F\Width) > *Stack\Width+1) Or (*Figure\X < 0)
+    If Not IsFigureInStackBounds(*Figure, *Stack)
       ProcedureReturn 1
     EndIf
     
@@ -476,7 +475,7 @@ Module TetrisLow
   
   
   Procedure IsFigureInStackBounds(*Figure.FIGURE, *Stack.STACK)
-    Protected.a RX, RY
+    Protected.w RX, RY  ; ЕСЛИ ПОСТАВИТЬ 1-БАЙТОВЫЙ ТИП ТО ПРОИЗОЙДЕТ ПЕРЕПОЛНЕНИЕ
     
     RX = *Figure\X + *Figure\Frame\Width - 1
     RY = *Figure\Y + *Figure\Frame\Height - 1
@@ -492,7 +491,7 @@ Module TetrisLow
     Protected Result.b
     ; ЕСЛИ ПОВЕРНУЛАСЬ - ПРОВЕРЯЕМ НА КОЛЛИЗИЮ; ЕСЛИ НЕТ - ЗНАЧИТ ВЫШЛА ЗА ГРАНИЦЫ
     If RotateWithCentering(*Figure, *Stack, RotateLeft)
-      
+      ; TODO: ДОДЕЛАТЬ ЕТУ ПРОЦЕДУРУ
       RotateWithCentering(*Figure, *Stack, Bool(Not RotateLeft))
     Else
       ProcedureReturn -1
@@ -508,10 +507,11 @@ Module TetrisLow
     
     If CheckCollision(*Figure, *Stack)
       Result = #False
-    ElseIf IsFigureInStackBounds(*Figure, *Stack)
-      Result = #True
+    ; НЕТ НУЖДЫ ПРОВЕРЯТЬ ВЫХОД ЗА ГРАНИЦЫ СТАКАНА, CheckCollision() ИТАК ДЕЛАЕТ ЭТО
+    ; ElseIf IsFigureInStackBounds(*Figure, *Stack)
+    ;  Result = #True
     Else
-      Result = #False
+      Result = #True
     EndIf
     *Figure\X - DeltaX
     *Figure\Y - DeltaY
@@ -544,7 +544,8 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 13
+; CursorPosition = 440
+; FirstLine = 394
 ; Folding = ----0--
 ; EnableUnicode
 ; EnableXP
