@@ -25,6 +25,7 @@ DeclareModule TetrisMid
     PocketIsUsed.b
     RenderArea.RECT
     isOver.b
+    CleanedLines.a
     Level.a
     Score.l
   EndStructure
@@ -34,7 +35,7 @@ DeclareModule TetrisMid
   ; =================================================================================
   
   ; СОЗДАЕТ ИГРУ
-  ; @Returns: Game.GAME
+  ; @Returns: *Game.GAME
   Declare CreateGame()
   
   ; ОБНУЛЯЕТ ВСЕ СЧЕТЧИКИ ИГРЫ (ОЧИЩАЕТ СТАКАН, ПЕРЕСОЗДАЕТ ОЧЕРЕДЬ И Т.Д.)
@@ -59,6 +60,13 @@ DeclareModule TetrisMid
   ; ОБРАБАТЫВАЕТ СОБЫТИЕ ПОМЕЩЕНИЯ ФИГУРЫ В КАРМАН
   ; @Returns: #True ЕСЛИ ФИГУРА БЫЛА ПОМЕЩЕНА В КАРМАН, ИНАЧЕ #False
   Declare GameAction_Pocket(*Game.GAME)
+  
+  ; ОБРАБАТЫВАЕТ СОБЫТИЕ БЫСТРОГО БРОСАНИЯ ФИГУРЫ
+  ; (ТЕХНИЧЕСКИ, ПРОСТО ДЕЛАЕТ ВЫСОТУ ФИГУРЫ РАВНОЙ ВЫСОТЕ ЕЕ ТЕНИ)
+  ; @Returns: #True
+  Declare GameAction_HardDrop(*Game.GAME)
+  
+  Declare FinishFallAndBurnLines(*Game.GAME, List BurnedY.a())
   ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   
   Global Dim *FiguresList.FIGURE (6)
@@ -67,21 +75,46 @@ EndDeclareModule
 
 
 Module TetrisMid
-  IncludeFile "DefaultFigures.pb"
-  CopyArray(*DefaultFigures(), *FiguresList())
   UseModule TetrisLow
+  
+  NewMap DefaultFigureBytes.BLOCK()
+  AddMapElement(DefaultFigureBytes(), "!")
+  DefaultFigureBytes()\id = $4F
+  AddMapElement(DefaultFigureBytes(), "@")
+  DefaultFigureBytes()\id = $52
+  AddMapElement(DefaultFigureBytes(), "#")
+  DefaultFigureBytes()\id = $63
+  AddMapElement(DefaultFigureBytes(), "$")
+  DefaultFigureBytes()\id = $74
+  AddMapElement(DefaultFigureBytes(), "%")
+  DefaultFigureBytes()\id = $85
+  AddMapElement(DefaultFigureBytes(), "^")
+  DefaultFigureBytes()\id = $96
+  AddMapElement(DefaultFigureBytes(), "&")
+  DefaultFigureBytes()\id = $A7
+  AddMapElement(DefaultFigureBytes(), "+")
+  DefaultFigureBytes()\id = $DA
+  
+  *FiguresList(0) = CreateFigureAuto(CreateFrameFromS(3, 2, DefaultFigureBytes(), "!!! ! "))
+  *FiguresList(1) = CreateFigureAuto(CreateFrameFromS(4, 1, DefaultFigureBytes(), "@@@@"))
+  *FiguresList(2) = CreateFigureAuto(CreateFrameFromS(3, 2, DefaultFigureBytes(), "####  "))
+  *FiguresList(3) = CreateFigureAuto(CreateFrameFromS(3, 2, DefaultFigureBytes(), "$$$  $"))
+  *FiguresList(4) = CreateFigureAuto(CreateFrameFromS(3, 2, DefaultFigureBytes(), "%%  %%"))
+  *FiguresList(5) = CreateFigureAuto(CreateFrameFromS(3, 2, DefaultFigureBytes(), " ^^^^ "))
+  *FiguresList(6) = CreateFigureAuto(CreateFrameFromS(2, 2, DefaultFigureBytes(), "&&&&"))
   
   ; ПОДГОТАВЛИВАЕТ ФИГУРУ К НАЧАЛУ ПАДЕНИЯ И ДЕЛАЕТ ЕЕ ТЕКУЩЕЙ
   Procedure _LaunchFigure(*Game.GAME, *Figure.FIGURE)
     *Figure\Frame = *Figure\DefaultFrame
-    *Figure\Y = #TETRIS_STACK_OVERFLOW
+    *Figure\Y = #TETRIS_STACK_OVERFLOW-1
     *Figure\X = *Game\Stack\Width / 2  -  *Figure\Frame\Width / 2
     *Game\Figure = *Figure
+    CalcShadowCoord(*Game\Figure, *Game\Stack)
   EndProcedure
   
   ; ВОЗВРАЩАЕТ СЛУЧАЙНУЮ ФИГУРУ ИЗ СПИСКА
   Procedure _GetRandomFigure()
-    ProcedureReturn *FiguresList(Random(ArraySize(*FiguresList()) - 1))
+    ProcedureReturn *FiguresList(Random(ArraySize(*FiguresList())))
   EndProcedure
   
   ; ЗАПОЛНЯЕТ ОЧЕРЕДЬ СЛУЧАЙНЫМИ ФИГУРАМИ
@@ -94,24 +127,45 @@ Module TetrisMid
   EndProcedure
   
   
+  Procedure.s _DebugStack(*Stack.STACK)
+    Protected.a x, y
+    Protected str$, blk.BLOCK
+    
+    For y = 0 To *Stack\Height-1
+      For x = 0 To *Stack\Width-1
+        blk\id = ReadStackXY(*Stack, x, y)
+        If Len(Hex(blk\id)) = 1
+          str$ + "0" + Hex(blk\id) + " "
+        Else
+          str$ + Hex(blk\id) + " "
+        EndIf
+      Next
+      str$ + #CRLF$
+    Next
+    ProcedureReturn str$
+  EndProcedure
+  
+  
   Procedure CreateGame()
-    Protected Game.GAME
+    Protected *Game.GAME
     Protected StackHeight = #TETRIS_STACK_HEIGHT + #TETRIS_STACK_OVERFLOW
     
-    Game\Stack = CreateStack(#TETRIS_STACK_WIDTH, StackHeight)
-    With Game\RenderArea
+    *Game = AllocateStructure(*Game)
+    *Game\Stack = CreateStack(#TETRIS_STACK_WIDTH, StackHeight)
+    With *Game\RenderArea
       \top = #TETRIS_STACK_OVERFLOW
       \left = 0
       \right = #TETRIS_STACK_WIDTH - 1
       \bottom = StackHeight - 1
     EndWith
-    ResetGame(Game)
+    ResetGame(*Game)
     
-    ProcedureReturn Game
+    ProcedureReturn *Game
   EndProcedure
   
   
   Procedure ResetGame(*Game.GAME)
+    *Game\CleanedLines = 0
     *Game\Level = 1
     *Game\Score = 0
     *Game\Figure = 0
@@ -125,6 +179,7 @@ Module TetrisMid
   Procedure GameAction_Rotate(*Game.GAME, RotateLeft.b = #True)
     If IsRotationPossible(*Game\Figure, *Game\Stack, RotateLeft) = 1
       RotateWithCentering(*Game\Figure, *Game\Stack, RotateLeft)
+      CalcShadowCoord(*Game\Figure, *Game\Stack)
       ProcedureReturn #True
     EndIf
     ProcedureReturn #False
@@ -148,6 +203,7 @@ Module TetrisMid
     If IsMovePossible(*Game\Figure, *Game\Stack, DeltaX, DeltaY)
       *Game\Figure\X + DeltaX
       *Game\Figure\Y + DeltaY
+      CalcShadowCoord(*Game\Figure, *Game\Stack)
       ProcedureReturn #True
     EndIf
     ProcedureReturn #False
@@ -186,10 +242,45 @@ Module TetrisMid
     EndIf
   EndProcedure
   
+  
+  Procedure GameAction_HardDrop(*Game.GAME)
+    *Game\Figure\Y = *Game\Figure\ShadowY
+    ProcedureReturn #True
+  EndProcedure
+  
+  
+  Procedure FinishFallAndBurnLines(*Game.GAME, List BurnedY.a())
+    Protected StartY.i, EndY.i, Result.a, beforeburn$
+    MergeWithStack(*Game\Figure, *Game\Stack)
+    ; РАСЧИТЫВАЕМ НАЧАЛЬНУЮ И КОНЕЧНУЮ ЛИНИЮ ДЛЯ ПРОВЕРКИ ЗАПОЛНЕНИЯ
+    StartY = *Game\Figure\Y
+    EndY = StartY + *Game\Figure\Frame\Height - 1
+    beforeburn$ = _DebugStack(*Game\Stack)
+    Result = BurnFilledLines(*Game\Stack, BurnedY(), StartY, EndY)
+    If Result
+      Debug "BEFORE BURN: "
+      Debug beforeburn$
+      Debug "AFTER BURN: "
+      Debug _DebugStack(*Game\Stack)
+      Debug "=========================================="
+    EndIf
+    ; TODO: СЛЕДУЮЩИЕ ВЫЧИСЛЕНИЯ ДОЛЖНЫ ВЫПОЛНЯТЬСЯ В ОТДЕЛЬНОЙ ПРОЦЕДУРЕ
+    If Result
+      *Game\CleanedLines + Result
+      *Game\Score + Pow(Result, 1.5) * *Game\Level
+      If *Game\CleanedLines % 45 = 0
+        *Game\Level + 1
+      EndIf
+    EndIf
+    LaunchNextAndProcessQueue(*Game)
+    ProcedureReturn Result
+  EndProcedure
+  
 EndModule
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 13
-; Folding = --
+; CursorPosition = 257
+; FirstLine = 237
+; Folding = ---
 ; EnableUnicode
 ; EnableXP
 ; EnablePurifier = 1,1,1,1

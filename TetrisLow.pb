@@ -595,8 +595,8 @@ Module TetrisLow
 EndModule
 
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 539
-; FirstLine = 512
+; CursorPosition = 174
+; FirstLine = 166
 ; Folding = ----0--
 ; EnableUnicode
 ; EnableXP
