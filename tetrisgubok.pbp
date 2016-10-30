@@ -7,7 +7,7 @@
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2016-10-29 02:05" user="root" host="PHENOM"/>
+    <lastopen date="2016-10-30 14:57" user="root" host="PHENOM"/>
   </section>
   <section name="files">
     <file name="DefaultFigures.pb">
@@ -19,30 +19,48 @@
     </file>
     <file name="TetrisDebug.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="752445eb269ed97c377b182e87c1113e"/>
+      <fingerprint md5="4ff3c4da7b8411be87384a4dc6661a3f"/>
     </file>
     <file name="TetrisLow.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="8f3ff3adae54d68abc0acca0b8152bd5"/>
+      <fingerprint md5="1c2504fd1b88500dcc946c849d0e2e3e"/>
     </file>
     <file name="TetrisMid.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="16cbb2ea902fa5756825231374149e86"/>
+      <fingerprint md5="1b02c58c10416792cfac575ec538d6fd"/>
+    </file>
+    <file name="Tetris.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="d2f2bb6c3958eff729a8e2ae2eb1a5dc"/>
+    </file>
+    <file name="TetroRender.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="cf49fb14a9f76f2a14da3eee59492d46"/>
     </file>
   </section>
   <section name="targets">
-    <target name="Default Target" enabled="1" default="1">
+    <target name="TetrisLow Debug" enabled="1" default="0">
       <inputfile value="TetrisDebug.pb"/>
       <outputfile value=""/>
       <executable value="008_debug_shadows_onerror.exe"/>
       <options unicode="1" xpskin="1" onerror="1" debug="1"/>
       <purifier enable="1" granularity="1,1,1,1"/>
-      <compilecount enable="1" value="450"/>
+      <compilecount enable="1" value="479"/>
       <buildcount enable="1" value="8"/>
       <constants>
         <constant value="#TETRIS_PREROTATION_LEFT =" enable="1"/>
         <constant value="#DEBUG_VERBOSITY_3 =" enable="0"/>
       </constants>
+    </target>
+    <target name="Tetris" enabled="1" default="1">
+      <inputfile value="Tetris.pb"/>
+      <outputfile value=""/>
+      <executable value="UGUBTRIS_0.0000009.exe"/>
+      <options unicode="1" xpskin="1" onerror="1" debug="1"/>
+      <subsystem value="/OPENGL"/>
+      <format exe="console" cpu="0"/>
+      <compilecount enable="1" value="396"/>
+      <buildcount enable="1" value="1"/>
     </target>
   </section>
 </project>

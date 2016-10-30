@@ -10,7 +10,8 @@ UseModule TetroRender
 Define *Game.GAME = CreateGame()
 Define StartTime.q = ElapsedMilliseconds()
 Define.i IterStart, IterTime, TimeFromLastStep, LastInputTime
-Define.b NextStepIsFinal, FallFinished
+Define.b NextStepIsFinal, FallFinished, isPaused
+Define.b BurningResult, LastLevel=1
 NewList BurnedY.a()
 ;- RATES
 Define.w StepRate = 400  ; ВРЕМЯ В МС, ЗА КОТОРОЕ ФИГУРА ОПУСТИТСЯ ВНИЗ
@@ -19,19 +20,47 @@ Define.w MaxCorrectionTime = 2000  ; МАКСИМАЛЬНОЕ ВРЕМЯ НА К
 InitTetroRender()
 RenderQueue(*Game)
 Repeat
-;   Delay(100)
-;   Continue
+  If *Game\isOver
+    RenderGameOver()
+    If GetAsyncKeyState_(#VK_RETURN)
+      ResetGame(*Game)
+      LastLevel = 1
+      StepRate = 400
+      RenderStack(*Game\Stack)
+      RenderQueue(*Game)
+      RenderPocket(*Game)
+      Continue
+    EndIf
+    Delay(300)
+    Continue
+  EndIf
+  
+  If isPaused
+    If GetAsyncKeyState_(#VK_PAUSE)
+      isPaused = 0
+    EndIf
+    Delay(300)
+    Continue
+  EndIf
+  
   IterStart = ElapsedMilliseconds()
   If Not *Game\Figure
     LaunchNextAndProcessQueue(*Game)
+    RenderQueue(*Game)
+    RenderCaptions(*Game)
   EndIf
   ;{  KEYBOARD CONTROLS
   If GetAsyncKeyState_(#VK_SHIFT)
     RenderFigure(*Game\Figure, #BL_EMPTY)
     If GameAction_Pocket(*Game)
       RenderPocket(*Game)
+      RenderQueue(*Game)
       Continue
     EndIf
+  EndIf
+  If GetAsyncKeyState_(#VK_PAUSE)
+    isPaused = 1
+    Continue
   EndIf
   If GetAsyncKeyState_(#VK_LEFT)
     LastInputTime = ElapsedMilliseconds()
@@ -93,11 +122,21 @@ Repeat
     FallFinished = 0
     NextStepIsFinal = 0
     TimeFromLastStep = 0
-    If FinishFallAndBurnLines(*Game, BurnedY())
+    RenderFigure(*Game\Figure)
+    BurningResult = FinishFallAndBurnLines(*Game, BurnedY())
+    If BurningResult > 0
       AnimateLinesBurning(BurnedY())
+      RenderCaptions(*Game)
       ClearList(BurnedY())
+      If *Game\Level > LastLevel
+        LastLevel = *Game\Level
+        StepRate - 20
+      EndIf
+    ElseIf BurningResult < 0
+      *Game\isOver = 1
     EndIf
     RenderQueue(*Game)
+    RenderFigure(*Game\Figure, #BL_EMPTY)
     RenderStack(*Game\Stack)
   EndIf
   RenderFigure(*Game\Figure)
@@ -105,8 +144,8 @@ Repeat
   IterTime = ElapsedMilliseconds() - IterStart
 ForEver
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 68
-; FirstLine = 57
+; CursorPosition = 27
+; FirstLine = 18
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

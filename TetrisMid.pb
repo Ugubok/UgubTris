@@ -110,6 +110,16 @@ Module TetrisMid
     *Figure\X = *Game\Stack\Width / 2  -  *Figure\Frame\Width / 2
     *Game\Figure = *Figure
     CalcShadowCoord(*Game\Figure, *Game\Stack)
+    ; СЛЕДУЮЩИЙ КОД БУДЕТ ПРИПОДНИМАТЬ ФИГУРУ В ЗОНУ ПЕРЕПОЛНЕНИЯ,
+    ; ЕСЛИ СТАКАН УЖЕ ПОЧТИ ПЕРЕПОЛНЕН
+    While *Figure\ShadowY = *Figure\Y
+      If *Figure\Y > 0
+        *Figure\Y - 1
+        CalcShadowCoord(*Figure, *Game\Stack)
+      Else
+        Break
+      EndIf
+    Wend
   EndProcedure
   
   ; ВОЗВРАЩАЕТ СЛУЧАЙНУЮ ФИГУРУ ИЗ СПИСКА
@@ -125,7 +135,6 @@ Module TetrisMid
       *Game\Queue(i) = _GetRandomFigure()
     Next
   EndProcedure
-  
   
   Procedure.s _DebugStack(*Stack.STACK)
     Protected.a x, y
@@ -171,6 +180,7 @@ Module TetrisMid
     *Game\Figure = 0
     *Game\FigureInPocket = 0
     *Game\PocketIsUsed = #False
+    *Game\isOver = 0
     _FillRandomQueue(*Game)
     ClearStack(*Game\Stack)
   EndProcedure
@@ -252,25 +262,27 @@ Module TetrisMid
   Procedure FinishFallAndBurnLines(*Game.GAME, List BurnedY.a())
     Protected StartY.i, EndY.i, Result.a, beforeburn$
     MergeWithStack(*Game\Figure, *Game\Stack)
+    If *Game\Figure\Y + *Game\Figure\Frame\Height - 1 <= #TETRIS_STACK_OVERFLOW
+      ProcedureReturn -1
+    EndIf
     ; РАСЧИТЫВАЕМ НАЧАЛЬНУЮ И КОНЕЧНУЮ ЛИНИЮ ДЛЯ ПРОВЕРКИ ЗАПОЛНЕНИЯ
     StartY = *Game\Figure\Y
     EndY = StartY + *Game\Figure\Frame\Height - 1
     beforeburn$ = _DebugStack(*Game\Stack)
     Result = BurnFilledLines(*Game\Stack, BurnedY(), StartY, EndY)
-    If Result
-      Debug "BEFORE BURN: "
-      Debug beforeburn$
-      Debug "AFTER BURN: "
-      Debug _DebugStack(*Game\Stack)
-      Debug "=========================================="
-    EndIf
+;     If Result
+;       Debug "BEFORE BURN: "
+;       Debug beforeburn$
+;       Debug "AFTER BURN: "
+;       Debug _DebugStack(*Game\Stack)
+;       Debug "=========================================="
+;     EndIf
     ; TODO: СЛЕДУЮЩИЕ ВЫЧИСЛЕНИЯ ДОЛЖНЫ ВЫПОЛНЯТЬСЯ В ОТДЕЛЬНОЙ ПРОЦЕДУРЕ
     If Result
       *Game\CleanedLines + Result
       *Game\Score + Pow(Result, 1.5) * *Game\Level
-      If *Game\CleanedLines % 45 = 0
-        *Game\Level + 1
-      EndIf
+      *Game\Level + Abs(*Game\CleanedLines / 45) + 1
+      If *Game\Level > 15 : *Game\Level = 15 : EndIf
     EndIf
     LaunchNextAndProcessQueue(*Game)
     ProcedureReturn Result
@@ -278,8 +290,8 @@ Module TetrisMid
   
 EndModule
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 257
-; FirstLine = 237
+; CursorPosition = 284
+; FirstLine = 248
 ; Folding = ---
 ; EnableUnicode
 ; EnableXP

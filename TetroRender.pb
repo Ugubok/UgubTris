@@ -55,6 +55,8 @@ DeclareModule TetroRender
   Declare RenderQueue(*Game.GAME)
   Declare RenderPocket(*Game.GAME)
   Declare AnimateLinesBurning(List BurnedY.a())
+  Declare RenderGameOver()
+  Declare RenderCaptions(*Game.GAME)
 EndDeclareModule
 
 
@@ -168,7 +170,7 @@ Module TetroRender
   
   
   Procedure InitTetroRender()
-    OpenConsole("UGUBTRIS 0.0000009e-1337")
+    OpenConsole("UGUBTRIS 0.0000009e-1337  Compile #" + Str(#PB_Editor_CompileCount))
     EnableGraphicalConsole(1)
     _DrawWindowBorders()
   EndProcedure
@@ -190,8 +192,8 @@ Module TetroRender
   
   Procedure RenderPocket(*Game.GAME)
     Protected x.a
+    _CleanWindow(#POCKETWIN_X, #POCKETWIN_Y, #POCKETWIN_W, #POCKETWIN_H)
     If *Game\FigureInPocket
-      _CleanWindow(#POCKETWIN_X, #POCKETWIN_Y, #POCKETWIN_W, #POCKETWIN_H)
       x = #POCKETWIN_X + #POCKETWIN_W/2 - *Game\FigureInPocket\Frame\Width/2
       _DrawSmallFigureFrame(*Game\FigureInPocket\DefaultFrame, x, #POCKETWIN_Y + 1)
     EndIf
@@ -205,7 +207,7 @@ Module TetroRender
     
     If Texture = #BL_RANDOM
       If Not RndTextureCache(Hex(*Figure))
-        Texture = Random(#BL_RANDOM-1, #BL_EMPTY+1)
+        Texture = Random(#BL_SHADOW-1, #BL_EMPTY+1)
         RndTextureCache(Hex(*Figure)) = Texture
       Else
         Texture = RndTextureCache(Hex(*Figure))
@@ -235,6 +237,27 @@ Module TetroRender
         EndIf
       Next
     Next
+  EndProcedure
+  
+  
+  Procedure RenderCaptions(*Game.GAME)
+    ConsoleLocate(#QUEUEWIN_X, #QUEUEWIN_Y + #QUEUEWIN_H + 3)
+    ConsoleColor(#CL_DARK_GRAY, #CL_BLACK)
+    Print("Level: ")
+    ConsoleColor(#CL_WHITE, #CL_BLACK)
+    Print(Str(*Game\Level) + "  ")
+    ; SCORE
+    ConsoleLocate(#QUEUEWIN_X, #QUEUEWIN_Y + #QUEUEWIN_H + 4)
+    ConsoleColor(#CL_DARK_GRAY, #CL_BLACK)
+    Print("Score: ")
+    ConsoleColor(#CL_WHITE, #CL_BLACK)
+    Print(Str(*Game\Score) + "   ")
+    ; CLEANED LINES
+    ConsoleLocate(#QUEUEWIN_X, #QUEUEWIN_Y + #QUEUEWIN_H + 5)
+    ConsoleColor(#CL_DARK_GRAY, #CL_BLACK)
+    Print("Lines: ")
+    ConsoleColor(#CL_WHITE, #CL_BLACK)
+    Print(Str(*Game\CleanedLines) + "   ")
   EndProcedure
   
   
@@ -275,10 +298,23 @@ Module TetroRender
     Next
   EndProcedure
   
+  
+  Procedure RenderGameOver()
+    _DrawWindow(#STACK_X + 5, #STACK_Y + 6, 9, 3, "", #CL_RED)
+    ConsoleLocate(#STACK_X + 7, #STACK_Y + 7)
+    ConsoleColor(#CL_WHITE, #CL_RED)
+    Print("П Р О И")
+    ConsoleLocate(#STACK_X + 7, #STACK_Y + 8)
+    Print("Г Р А Л")
+    ConsoleColor(#CL_DARK_GRAY, #CL_RED)
+    ConsoleLocate(#STACK_X + 5, #STACK_Y + 9)
+    Print("PRESS ENTER")
+  EndProcedure
+  
 EndModule
 ; IDE Options = PureBasic 5.40 LTS (Windows - x86)
-; CursorPosition = 273
-; FirstLine = 237
+; CursorPosition = 259
+; FirstLine = 239
 ; Folding = ---
 ; EnableUnicode
 ; EnableXP
