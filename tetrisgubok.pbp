@@ -7,31 +7,31 @@
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2016-10-30 14:57" user="root" host="PHENOM"/>
+    <lastopen date="2016-11-23 08:58" user="root" host="PHENOM"/>
   </section>
   <section name="files">
     <file name="DefaultFigures.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
       <fingerprint md5="4ebccd18f4478f802d09b373f9279413"/>
     </file>
+    <file name="Tetris.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
+      <fingerprint md5="d2f2bb6c3958eff729a8e2ae2eb1a5dc"/>
+    </file>
     <file name="TetrisDebug.pb">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+"/>
     </file>
     <file name="TetrisDebug.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
       <fingerprint md5="4ff3c4da7b8411be87384a4dc6661a3f"/>
     </file>
     <file name="TetrisLow.pb">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
       <fingerprint md5="1c2504fd1b88500dcc946c849d0e2e3e"/>
     </file>
     <file name="TetrisMid.pb">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
       <fingerprint md5="1b02c58c10416792cfac575ec538d6fd"/>
-    </file>
-    <file name="Tetris.pb">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="d2f2bb6c3958eff729a8e2ae2eb1a5dc"/>
     </file>
     <file name="TetroRender.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
@@ -59,7 +59,7 @@
       <options unicode="1" xpskin="1" onerror="1" debug="1"/>
       <subsystem value="/OPENGL"/>
       <format exe="console" cpu="0"/>
-      <compilecount enable="1" value="396"/>
+      <compilecount enable="1" value="398"/>
       <buildcount enable="1" value="1"/>
     </target>
   </section>
